@@ -13,7 +13,8 @@
     "db:prepare-migration": "node scripts/db-prepare-migration.js",
     "db:migrate": "npx prisma migrate deploy",
     "db:generate": "prisma generate",
-    "db:test-migration": "node scripts/test-migration.js"
+    "db:test-migration": "node scripts/test-migration.js",
+    "flow": "npm run db:test-migration && npm run db:migrate && npm run db:generate && npm run dev"
   },
   "dependencies": {
     "@mantine/core": "^8.3.18",

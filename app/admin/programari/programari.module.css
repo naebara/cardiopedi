@@ -1,0 +1,169 @@
+/* ───────────────────────────────────────────────
+   Programari — layout & mobile behaviour
+   ─────────────────────────────────────────────── */
+
+.panel {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  padding: 16px 24px;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.toolbarLeft {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.toolbarTitle {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.nav {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.toolbarRight {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+}
+
+.viewArea {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── List as table (with inner scroll) ── */
+.listWrap {
+  align-content: start;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 640px;
+  width: 100%;
+}
+
+.table thead th {
+  background: #f8fbfb;
+  border-bottom: 1px solid #e2eef0;
+  color: #5e7784;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 11px 14px;
+  position: sticky;
+  text-align: left;
+  text-transform: uppercase;
+  top: 0;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.row {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.row td {
+  border-bottom: 1px solid #eef4f5;
+  color: #143047;
+  font-size: 14px;
+  padding: 12px 14px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.row:hover td {
+  background: #f3faf8;
+}
+
+.rowChild {
+  font-weight: 600;
+}
+
+.rowSub {
+  color: #5e7784;
+  font-size: 12.5px;
+}
+
+.emptyList {
+  color: #5e7784;
+  padding: 40px 16px;
+  text-align: center;
+}
+
+/* ── Calendar scroll containers ── */
+.calendarScroll {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.monthScroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .panel {
+    padding: 64px 12px 12px;
+  }
+
+  .toolbar {
+    gap: 12px;
+  }
+
+  .toolbarLeft {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .toolbarTitle {
+    font-size: 18px;
+  }
+
+  .toolbarRight {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .segmented {
+    width: 100%;
+  }
+}

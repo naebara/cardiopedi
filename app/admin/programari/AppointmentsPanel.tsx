@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ActionIcon, Button, Group, SegmentedControl, Title } from "@mantine/core";
+import { ActionIcon, Button, Group, SegmentedControl } from "@mantine/core";
 import { CalendarDays, ChevronLeft, ChevronRight, List as ListIcon } from "lucide-react";
 import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
 import { AdminMonthGrid } from "./components/AdminMonthGrid";
 import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
 import { AppointmentDetailsModal } from "./components/AppointmentDetailsModal";
 import { dateValue, getDatesOfWeek, monthLabel } from "./lib/admin-calendar-utils";
+import styles from "./programari.module.css";
 
 type Period = "day" | "week" | "month";
 type Mode = "calendar" | "list";
@@ -74,13 +75,11 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
   }, [appointments, period, currentDate]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "16px 24px", backgroundColor: "#fff" }}>
-      <Group justify="space-between" mb="lg" wrap="wrap" gap="md">
-        <Group gap="md">
-          <Title order={3} size="h3" fw={600} style={{ textTransform: "capitalize", minWidth: 180 }}>
-            {periodLabel}
-          </Title>
-          <Group gap="xs">
+    <div className={styles.panel}>
+      <div className={styles.toolbar}>
+        <div className={styles.toolbarLeft}>
+          <h3 className={styles.toolbarTitle}>{periodLabel}</h3>
+          <div className={styles.nav}>
             <Button variant="default" size="sm" onClick={goToday}>
               Astăzi
             </Button>
@@ -104,11 +103,12 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
                 <ChevronRight size={18} />
               </ActionIcon>
             </Group>
-          </Group>
-        </Group>
+          </div>
+        </div>
 
-        <Group gap="md">
+        <div className={styles.toolbarRight}>
           <SegmentedControl
+            className={styles.segmented}
             size="sm"
             value={period}
             onChange={(value) => setPeriod(value as Period)}
@@ -119,13 +119,14 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
             ]}
           />
           <SegmentedControl
+            className={styles.segmented}
             size="sm"
             value={mode}
             onChange={(value) => setMode(value as Mode)}
             data={[
               {
                 label: (
-                  <Group gap={6} wrap="nowrap">
+                  <Group gap={6} wrap="nowrap" justify="center">
                     <CalendarDays size={15} />
                     <span>Calendar</span>
                   </Group>
@@ -134,7 +135,7 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
               },
               {
                 label: (
-                  <Group gap={6} wrap="nowrap">
+                  <Group gap={6} wrap="nowrap" justify="center">
                     <ListIcon size={15} />
                     <span>Listă</span>
                   </Group>
@@ -143,16 +144,22 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
               },
             ]}
           />
-        </Group>
-      </Group>
+        </div>
+      </div>
 
-      {mode === "list" ? (
-        <AdminAppointmentsList appointments={periodAppointments} onSelect={setSelected} />
-      ) : period === "month" ? (
-        <AdminMonthGrid currentDate={currentDate} appointments={appointments} onSelect={setSelected} />
-      ) : (
-        <AdminCalendarGrid currentDate={currentDate} view={period} appointments={appointments} onSelect={setSelected} />
-      )}
+      <div className={styles.viewArea}>
+        {mode === "list" ? (
+          <AdminAppointmentsList appointments={periodAppointments} onSelect={setSelected} />
+        ) : period === "month" ? (
+          <div className={styles.monthScroll}>
+            <AdminMonthGrid currentDate={currentDate} appointments={appointments} onSelect={setSelected} />
+          </div>
+        ) : (
+          <div className={styles.calendarScroll}>
+            <AdminCalendarGrid currentDate={currentDate} view={period} appointments={appointments} onSelect={setSelected} />
+          </div>
+        )}
+      </div>
 
       <AppointmentDetailsModal appointment={selected} onClose={() => setSelected(null)} />
     </div>

@@ -76,6 +76,7 @@
 }
 
 .content {
+  min-width: 0;
   padding: 34px clamp(20px, 4vw, 56px);
 }
 

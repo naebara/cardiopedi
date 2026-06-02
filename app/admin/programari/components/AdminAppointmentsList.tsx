@@ -1,5 +1,5 @@
 import { Badge } from "@mantine/core";
-import styles from "../../admin.module.css";
+import styles from "../programari.module.css";
 
 export type Appointment = {
   id: string;
@@ -30,7 +30,7 @@ const statusColor: Record<string, string> = {
 
 export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointmentsListProps) {
   return (
-    <div style={{ flex: 1, overflowY: "auto" }}>
+    <div className={styles.listWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
@@ -46,12 +46,15 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
           {appointments.map((appointment) => (
             <tr
               key={appointment.id}
+              className={styles.row}
               onClick={() => onSelect?.(appointment)}
-              style={{ cursor: onSelect ? "pointer" : "default" }}
             >
               <td>{appointment.day}, {appointment.date}</td>
               <td>{appointment.time}</td>
-              <td>{appointment.childName}<br /><small>{appointment.parentName}</small></td>
+              <td>
+                <div className={styles.rowChild}>{appointment.childName}</div>
+                <div className={styles.rowSub}>{appointment.parentName}</div>
+              </td>
               <td>{appointment.service}</td>
               <td>{appointment.phone}</td>
               <td>
@@ -63,7 +66,7 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
           ))}
           {appointments.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "var(--mantine-color-gray-6)" }}>
+              <td colSpan={6} className={styles.emptyList}>
                 Nu există programări pentru perioada selectată.
               </td>
             </tr>

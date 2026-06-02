@@ -10,13 +10,64 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String?
-  image     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String              @id @default(cuid())
+  name           String?
+  email          String              @unique
+  password       String?
+  image          String?
+  isMasterUser   Boolean             @default(false)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  featureGrants  UserFeatureGrant[]
+  appointments   Appointment[]       @relation("AppointmentOwner")
 }
 
-// Add your application models here...
+model Feature {
+  key         String             @id
+  name        String
+  description String
+  category    String
+  createdAt   DateTime           @default(now())
+  grants      UserFeatureGrant[]
+}
+
+model UserFeatureGrant {
+  id         String   @id @default(cuid())
+  userId     String
+  featureKey String
+  createdAt  DateTime @default(now())
+  createdBy  String?
+  feature    Feature  @relation(fields: [featureKey], references: [key], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, featureKey])
+  @@index([featureKey])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  date        DateTime
+  time        String
+  durationMin Int               @default(30)
+  service     String
+  parentName  String
+  childName   String
+  phone       String
+  email       String?
+  notes       String?
+  status      AppointmentStatus @default(NEW)
+  ownerId     String?
+  owner       User?             @relation("AppointmentOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([date])
+  @@index([status])
+}
+
+enum AppointmentStatus {
+  NEW
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}

@@ -12,7 +12,6 @@ export const authConfig = {
             const isPublicPage = publicPaths.includes(nextUrl.pathname);
 
             if (isOnAuthPage) {
-                if (isLoggedIn) return Response.redirect(new URL('/', nextUrl));
                 return true;
             }
 

@@ -31,6 +31,7 @@ export default function LoginView() {
                 </Box>
 
                 <form action={formAction}>
+                    <input name="redirectTo" type="hidden" value="/admin" />
                     <Box mb={20}>
                         <TextInput
                             id="email"

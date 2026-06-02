@@ -10,9 +10,7 @@ export default function AppointmentsPage() {
         <div className={styles.bookingIntro}>
           <p className={styles.eyebrow}>Programari</p>
           <h1>Programare rapida, fara cont.</h1>
-          <p>
-            Selecteaza data, ora si lasa datele de contact. Intervalul standard este de 30 de minute.
-          </p>
+          <p>Selecteaza data, ora si lasa datele de contact.</p>
         </div>
         <BookingForm />
       </section>

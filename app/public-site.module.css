@@ -484,6 +484,132 @@
   width: 100%;
 }
 
+.datePickerWrap {
+  position: relative;
+}
+
+.datePickerWrap input[readonly] {
+  cursor: pointer;
+}
+
+.datePickerPopover {
+  background: #ffffff;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(34, 84, 108, 0.18);
+  left: 0;
+  margin-top: 8px;
+  padding: 14px;
+  position: absolute;
+  right: auto;
+  top: 100%;
+  width: min(360px, calc(100vw - 48px));
+  z-index: 30;
+}
+
+.datePickerHeader {
+  align-items: center;
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  margin-bottom: 12px;
+}
+
+.datePickerHeader strong {
+  color: #143047;
+  font-size: 16px;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.datePickerHeader button {
+  align-items: center;
+  background: #f8fbfb;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  color: #1f84ba;
+  cursor: pointer;
+  display: inline-flex;
+  height: 40px;
+  justify-content: center;
+  width: 40px;
+}
+
+.datePickerHeader button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.weekdayGrid,
+.monthGrid {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekdayGrid {
+  margin-bottom: 8px;
+}
+
+.weekdayGrid span {
+  color: #6d8793;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.emptyDateCell,
+.calendarDay,
+.selectedCalendarDay {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  min-height: 38px;
+}
+
+.calendarDay,
+.selectedCalendarDay {
+  align-items: center;
+  background: linear-gradient(135deg, #e7f5fb 0%, #e9f8f0 100%);
+  border: 1px solid #8bd4af;
+  box-shadow: 0 8px 18px rgba(47, 159, 127, 0.12);
+  color: #155f82;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 15px;
+  font-weight: 900;
+  justify-content: center;
+}
+
+.calendarDay:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d6eef8 0%, #d8f4e5 100%);
+  border-color: #2f9f7f;
+  color: #143047;
+  transform: translateY(-1px);
+}
+
+.calendarDay:disabled {
+  background: #f2f5f5;
+  border-color: #edf3f3;
+  box-shadow: none;
+  color: #a9bbc2;
+  cursor: not-allowed;
+  font-weight: 700;
+  text-decoration: line-through;
+  transform: none;
+}
+
+.selectedCalendarDay {
+  background: #1f84ba;
+  border-color: #1f84ba;
+  box-shadow: 0 10px 20px rgba(31, 132, 186, 0.22);
+  color: #ffffff;
+}
+
+.fieldError {
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .bookingForm textarea {
   line-height: 1.5;
   min-height: 110px;
@@ -526,6 +652,11 @@
 .bookingForm .primaryButton {
   margin-top: 20px;
   width: 100%;
+}
+
+.bookingForm .primaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .contactPanel hr {
@@ -635,6 +766,10 @@
   .principleGrid,
   .formGrid {
     grid-template-columns: 1fr;
+  }
+
+  .datePickerPopover {
+    width: 100%;
   }
 
   .trustBar div {

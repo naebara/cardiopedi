@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarDays, CheckCircle2, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
 import { appointmentNotice, services } from "../site-data";
 import styles from "../public-site.module.css";
 
@@ -22,7 +22,7 @@ function toTime(value: number) {
 }
 
 function dateValue(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function labelDate(date: Date) {
@@ -30,6 +30,13 @@ function labelDate(date: Date) {
     weekday: "long",
     day: "numeric",
     month: "long",
+  }).format(date);
+}
+
+function monthLabel(date: Date) {
+  return new Intl.DateTimeFormat("ro-RO", {
+    month: "long",
+    year: "numeric",
   }).format(date);
 }
 
@@ -64,6 +71,13 @@ export function BookingForm() {
   }, []);
 
   const [selectedDate, setSelectedDate] = useState(availableDates[0]?.value ?? "");
+  const [phone, setPhone] = useState("");
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const [year, month] = (availableDates[0]?.value ?? dateValue(new Date())).split("-").map(Number);
+    return new Date(year, month - 1, 1);
+  });
+  const availableDateValues = useMemo(() => new Set(availableDates.map((date) => date.value)), [availableDates]);
   const selectedDateMeta = availableDates.find((date) => date.value === selectedDate);
   const slots = selectedDateMeta ? buildSlots(daySchedule[selectedDateMeta.weekday].start, daySchedule[selectedDateMeta.weekday].end) : [];
   const [selectedTime, setSelectedTime] = useState(slots[0] ?? "");
@@ -74,7 +88,35 @@ export function BookingForm() {
     const meta = availableDates.find((date) => date.value === value);
     const nextSlots = meta ? buildSlots(daySchedule[meta.weekday].start, daySchedule[meta.weekday].end) : [];
     setSelectedTime(nextSlots[0] ?? "");
+    setIsDatePickerOpen(false);
   }
+
+  const selectedDateLabel = selectedDateMeta?.label ?? "";
+  const calendarDates = useMemo(() => {
+    const firstDay = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
+    const daysInMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 0).getDate();
+    const mondayFirstOffset = (firstDay.getDay() + 6) % 7;
+    const cells: Array<Date | null> = Array.from({ length: mondayFirstOffset }, () => null);
+
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      cells.push(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
+    }
+
+    while (cells.length % 7 !== 0) {
+      cells.push(null);
+    }
+
+    return cells;
+  }, [calendarMonth]);
+
+  const firstAvailableMonth = availableDates[0]
+    ? new Date(Number(availableDates[0].value.slice(0, 4)), Number(availableDates[0].value.slice(5, 7)) - 1, 1)
+    : calendarMonth;
+  const lastAvailableMonth = availableDates.at(-1)
+    ? new Date(Number(availableDates.at(-1)!.value.slice(0, 4)), Number(availableDates.at(-1)!.value.slice(5, 7)) - 1, 1)
+    : calendarMonth;
+  const canGoPrev = calendarMonth > firstAvailableMonth;
+  const canGoNext = calendarMonth < lastAvailableMonth;
 
   return (
     <form
@@ -87,13 +129,78 @@ export function BookingForm() {
       <div className={styles.formGrid}>
         <label>
           <span><CalendarDays size={18} /> Data</span>
-          <select value={selectedDate} onChange={(event) => onDateChange(event.target.value)} required>
-            {availableDates.map((date) => (
-              <option key={date.value} value={date.value}>
-                {date.label}
-              </option>
-            ))}
-          </select>
+          <div className={styles.datePickerWrap}>
+            <input
+              aria-expanded={isDatePickerOpen}
+              aria-haspopup="dialog"
+              onClick={() => setIsDatePickerOpen(true)}
+              onFocus={() => setIsDatePickerOpen(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setIsDatePickerOpen(false);
+              }}
+              placeholder="Selecteaza data"
+              readOnly
+              required
+              type="text"
+              value={selectedDateLabel}
+            />
+            <input name="date" type="hidden" value={selectedDate} />
+
+            {isDatePickerOpen ? (
+              <div className={styles.datePickerPopover} role="dialog" aria-label="Alege data programarii">
+                <div className={styles.datePickerHeader}>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}
+                    disabled={!canGoPrev}
+                    aria-label="Luna precedenta"
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <strong>{monthLabel(calendarMonth)}</strong>
+                  <button
+                    type="button"
+                    onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}
+                    disabled={!canGoNext}
+                    aria-label="Luna urmatoare"
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+
+                <div className={styles.weekdayGrid} aria-hidden="true">
+                  {["Lu", "Ma", "Mi", "Jo", "Vi", "Sa", "Du"].map((day) => (
+                    <span key={day}>{day}</span>
+                  ))}
+                </div>
+
+                <div className={styles.monthGrid}>
+                  {calendarDates.map((date, index) => {
+                    if (!date) {
+                      return <span className={styles.emptyDateCell} key={`empty-${index}`} />;
+                    }
+
+                    const value = dateValue(date);
+                    const isAvailable = availableDateValues.has(value);
+                    const isSelected = value === selectedDate;
+
+                    return (
+                      <button
+                        className={isSelected ? styles.selectedCalendarDay : styles.calendarDay}
+                        disabled={!isAvailable}
+                        key={value}
+                        onClick={() => onDateChange(value)}
+                        type="button"
+                        aria-pressed={isSelected}
+                      >
+                        {date.getDate()}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </div>
         </label>
 
         <label>
@@ -130,7 +237,19 @@ export function BookingForm() {
 
         <label>
           <span><Phone size={18} /> Telefon</span>
-          <input name="phone" type="tel" placeholder="07xx xxx xxx" required />
+          <input
+            name="phone"
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]{10}"
+            minLength={10}
+            maxLength={10}
+            placeholder="07xxxxxxxx"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value.replace(/\D/g, "").slice(0, 10))}
+            title="Introdu un numar de telefon valid, format din 10 cifre."
+            required
+          />
         </label>
 
         <label>

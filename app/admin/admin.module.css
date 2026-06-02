@@ -62,7 +62,8 @@
   padding: 12px;
 }
 
-.nav a:hover {
+.nav a:hover,
+.nav a[data-active="true"] {
   background: #e9f8f0;
   color: #1f7660;
 }

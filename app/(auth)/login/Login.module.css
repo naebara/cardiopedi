@@ -1,83 +1,236 @@
 .wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f6f6f4;
-  padding: 48px 16px;
+  background: #ffffff;
+  color: #143047;
+  height: 100dvh;
+  overflow: auto;
+  padding: 0;
+}
+
+.loginShell {
+  background: #ffffff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: grid;
+  grid-template-columns: minmax(360px, 0.86fr) minmax(0, 1.14fr);
+  min-height: 100dvh;
+  overflow: hidden;
 }
 
 .paper {
+  align-self: center;
+  background: #ffffff;
+  border: 0;
+  box-shadow: none;
+  justify-self: center;
+  max-width: 480px;
+  padding: clamp(24px, 4vw, 44px);
   width: 100%;
-  max-width: 440px;
-  border-radius: 4px;
-  padding: 40px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e5e7eb;
-  background-color: white;
+}
+
+.brand {
+  align-items: center;
+  color: #143047;
+  display: inline-flex;
+  gap: 10px;
+  margin-bottom: clamp(24px, 5vh, 54px);
+  text-decoration: none;
+}
+
+.brand span {
+  align-items: center;
+  background: linear-gradient(135deg, #2a8bc1, #69c88f);
+  border-radius: 8px;
+  color: #ffffff;
+  display: inline-flex;
+  height: 46px;
+  justify-content: center;
+  width: 46px;
+}
+
+.brand strong {
+  color: #1b73a7;
+  display: block;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.brand small {
+  color: #4f927c;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.eyebrow {
+  color: #309b7a;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0;
+  margin: 0 0 10px;
+  text-transform: uppercase;
 }
 
 .title {
-  font-family: Georgia, serif;
-  font-size: 40px;
-  font-weight: bold;
-  color: #111827;
-  line-height: 1.1;
-  margin-bottom: 16px;
+  color: #143047;
+  font-size: clamp(36px, 5vw, 52px);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.02;
+  margin: 0 0 16px;
 }
 
 .subtitle {
-  color: #4a4a4a;
-  font-size: 14px;
-  margin-bottom: 24px;
+  color: #58707c;
+  font-size: 16px;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .link {
-  color: #007c89;
-  text-decoration-line: underline;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
+  color: #1f84ba;
+  font-weight: 900;
+  text-decoration-line: none;
 }
 
 .link:hover {
-  color: #005e68;
+  color: #1f7660;
 }
 
 .label {
+  color: #24485d;
   font-size: 14px;
-  font-weight: 700;
-  color: #241c15;
+  font-weight: 900;
   margin-bottom: 8px;
 }
 
 .input {
-  border-radius: 4px;
-  border: 1px solid #8c8c8c;
-  color: #111827;
-  background-color: white;
+  background: #f8fbfb;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  color: #16344a;
+  min-height: 50px;
 }
 
 .input:focus {
-  border-color: #007c89;
+  border-color: #1f84ba;
 }
 
 .submitButton {
-  background-color: #007c89;
-  border-radius: 9999px;
-  height: 48px;
+  background: #1f84ba;
+  border-radius: 8px;
+  box-shadow: 0 16px 34px rgba(31, 132, 186, 0.2);
+  color: #ffffff;
   font-size: 15px;
-  font-weight: 600;
-  color: white;
-  transition: background-color 0.2s;
-  margin-top: 16px;
+  font-weight: 900;
+  height: 50px;
+  margin-top: 4px;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .submitButton:hover {
-  background-color: #005e68;
+  background: #196f9f;
+  transform: translateY(-1px);
 }
 
 .errorText {
-  color: red;
+  background: #fff1f0;
+  border: 1px solid #ffd1cc;
+  border-radius: 8px;
+  color: #b42318;
   font-size: 14px;
-  margin-top: 8px;
+  font-weight: 800;
+  margin-top: 14px;
+  padding: 12px;
+}
+
+.accountNote {
+  color: #58707c;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 22px 0 0;
+}
+
+.coverPanel {
+  background: #e7f5fb;
+  min-height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.coverImage {
+  object-fit: cover;
+  object-position: center;
+}
+
+.coverOverlay {
+  background:
+    linear-gradient(90deg, rgba(20, 48, 71, 0.08) 0%, rgba(20, 48, 71, 0) 44%),
+    linear-gradient(180deg, rgba(20, 48, 71, 0) 42%, rgba(20, 48, 71, 0.58) 100%);
+  inset: 0;
+  position: absolute;
+}
+
+@media (max-width: 900px) {
+  .wrapper {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .loginShell {
+    grid-template-columns: 1fr;
+    min-height: 100dvh;
+  }
+
+  .coverPanel {
+    min-height: 320px;
+    order: -1;
+  }
+
+  .paper {
+    max-width: 620px;
+  }
+
+  .brand {
+    margin-bottom: 34px;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 760px) {
+  .paper {
+    padding-block: 24px;
+  }
+
+  .brand {
+    margin-bottom: 22px;
+  }
+
+  .title {
+    font-size: 38px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .accountNote {
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .loginShell {
+    border: 0;
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .coverPanel {
+    min-height: 240px;
+  }
+
+  .paper {
+    padding: 26px 18px 34px;
+  }
 }

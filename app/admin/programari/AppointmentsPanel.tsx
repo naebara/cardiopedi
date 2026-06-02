@@ -1,19 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ActionIcon, Button, Group, Title } from "@mantine/core";
+import { ChevronLeft, ChevronRight, List as ListIcon } from "lucide-react";
+import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
+import { AdminMonthGrid } from "./components/AdminMonthGrid";
+import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
+import { monthLabel } from "./lib/admin-calendar-utils";
 import styles from "../admin.module.css";
-
-type Appointment = {
-  id: string;
-  date: string;
-  day: string;
-  time: string;
-  childName: string;
-  parentName: string;
-  service: string;
-  phone: string;
-  status: string;
-};
 
 const appointments: Appointment[] = [
   {
@@ -62,87 +56,118 @@ const appointments: Appointment[] = [
   },
 ];
 
-const filters = [
-  { key: "today", label: "Azi" },
-  { key: "week", label: "Saptamana aceasta" },
-  { key: "month", label: "Luna aceasta" },
-] as const;
-
 export function AppointmentsPanel() {
-  const [view, setView] = useState<"calendar" | "list">("calendar");
-  const [range, setRange] = useState<(typeof filters)[number]["key"]>("week");
+  const [view, setView] = useState<"day" | "week" | "month" | "list">("week");
+  const [currentDate, setCurrentDate] = useState(() => new Date("2026-06-03T12:00:00")); // Hardcoded to match our mock data for demo purposes
 
-  const visibleAppointments = useMemo(() => {
-    if (range === "today") {
-      return appointments.filter((appointment) => appointment.date === "2026-06-03");
-    }
+  const goNext = () => {
+    setCurrentDate((prev) => {
+      const next = new Date(prev);
+      if (view === "month") next.setMonth(prev.getMonth() + 1);
+      else if (view === "week") next.setDate(prev.getDate() + 7);
+      else next.setDate(prev.getDate() + 1); // day or list
+      return next;
+    });
+  };
 
-    return appointments;
-  }, [range]);
+  const goPrev = () => {
+    setCurrentDate((prev) => {
+      const prevDate = new Date(prev);
+      if (view === "month") prevDate.setMonth(prev.getMonth() - 1);
+      else if (view === "week") prevDate.setDate(prev.getDate() - 7);
+      else prevDate.setDate(prev.getDate() - 1); // day or list
+      return prevDate;
+    });
+  };
 
-  const groupedByDay = useMemo(() => {
-    const groups = new Map<string, Appointment[]>();
+  const goToday = () => {
+    setCurrentDate(new Date());
+  };
 
-    for (const appointment of visibleAppointments) {
-      const key = `${appointment.day}, ${appointment.date.slice(8)}`;
-      groups.set(key, [...(groups.get(key) ?? []), appointment]);
-    }
-
-    return Array.from(groups.entries());
-  }, [visibleAppointments]);
+  // Basic filtering for list view (just showing all in our mock for now, but in reality would fetch based on date)
+  const visibleAppointments = useMemo(() => appointments, []);
 
   return (
-    <div className={styles.panel}>
-      <div className={styles.toolbar}>
-        <button data-active={view === "calendar"} onClick={() => setView("calendar")} type="button">Calendar view</button>
-        <button data-active={view === "list"} onClick={() => setView("list")} type="button">List view</button>
-        {filters.map((filter) => (
-          <button data-active={range === filter.key} key={filter.key} onClick={() => setRange(filter.key)} type="button">
-            {filter.label}
-          </button>
-        ))}
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "16px 24px", backgroundColor: "#fff" }}>
+      {/* Calendar Toolbar */}
+      <Group justify="space-between" mb="lg">
+        <Group>
+          <Title order={3} size="h3" fw={600}>
+            {monthLabel(currentDate)}
+            {view === "day" && `, ${currentDate.getDate()}`}
+          </Title>
+        </Group>
 
-      {view === "calendar" ? (
-        <div className={styles.calendarGrid}>
-          {groupedByDay.map(([day, dayAppointments]) => (
-            <section className={styles.calendarDay} key={day}>
-              <strong>{day}</strong>
-              {dayAppointments.map((appointment) => (
-                <article className={styles.appointmentCard} key={appointment.id}>
-                  <b>{appointment.time} - {appointment.childName}</b>
-                  <span className={styles.appointmentMeta}>{appointment.service}</span>
-                  <span className={styles.appointmentMeta}>{appointment.parentName} · {appointment.phone}</span>
-                </article>
-              ))}
-            </section>
-          ))}
-        </div>
+        <Group gap="md">
+          <Group gap="xs">
+            <Button variant="default" size="sm" onClick={goToday}>
+              Astăzi
+            </Button>
+            <Group gap={0}>
+              <ActionIcon 
+                variant="default" 
+                size="lg" 
+                onClick={goPrev} 
+                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0, borderRight: 0 }}
+              >
+                <ChevronLeft size={18} />
+              </ActionIcon>
+              <ActionIcon 
+                variant="default" 
+                size="lg" 
+                onClick={goNext}
+                style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
+              >
+                <ChevronRight size={18} />
+              </ActionIcon>
+            </Group>
+          </Group>
+
+          <Group gap={0}>
+            <Button 
+              variant={view === "day" ? "filled" : "default"} 
+              size="sm" 
+              onClick={() => setView("day")}
+              style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+            >
+              Zi
+            </Button>
+            <Button 
+              variant={view === "week" ? "filled" : "default"} 
+              size="sm" 
+              onClick={() => setView("week")}
+              style={{ borderRadius: 0, borderLeft: 0 }}
+            >
+              Săpt
+            </Button>
+            <Button 
+              variant={view === "month" ? "filled" : "default"} 
+              size="sm" 
+              onClick={() => setView("month")}
+              style={{ borderRadius: 0, borderLeft: 0 }}
+            >
+              Lună
+            </Button>
+            <Button 
+              variant={view === "list" ? "filled" : "default"} 
+              size="sm" 
+              onClick={() => setView("list")}
+              leftSection={<ListIcon size={16} />}
+              style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0, borderLeft: 0 }}
+            >
+              Listă
+            </Button>
+          </Group>
+        </Group>
+      </Group>
+
+      {/* Main Content Area */}
+      {view === "month" ? (
+        <AdminMonthGrid currentDate={currentDate} appointments={visibleAppointments} />
+      ) : view === "day" || view === "week" ? (
+        <AdminCalendarGrid currentDate={currentDate} view={view} appointments={visibleAppointments} />
       ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>Ora</th>
-              <th>Copil</th>
-              <th>Serviciu</th>
-              <th>Contact</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleAppointments.map((appointment) => (
-              <tr key={appointment.id}>
-                <td>{appointment.day}, {appointment.date}</td>
-                <td>{appointment.time}</td>
-                <td>{appointment.childName}<br /><small>{appointment.parentName}</small></td>
-                <td>{appointment.service}</td>
-                <td>{appointment.phone}</td>
-                <td><span className={styles.status}>{appointment.status}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <AdminAppointmentsList appointments={visibleAppointments} />
       )}
     </div>
   );

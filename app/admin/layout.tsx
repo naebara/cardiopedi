@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { CalendarDays, HeartPulse, LayoutDashboard, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
 import { SignOutButton } from "@/app/components/sign-out-button";
+import { AdminNavItem } from "./components/AdminNavItem";
+import { AdminContentWrapper } from "./components/AdminContentWrapper";
 import { canAccess, getCurrentAdminUser } from "@/lib/admin-features";
 import styles from "./admin.module.css";
 
@@ -32,10 +33,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {visibleItems.map((item) => {
             const Icon = item.icon;
             return (
-              <Link href={item.href} key={item.href}>
+              <AdminNavItem href={item.href} key={item.href}>
                 <Icon size={18} />
                 {item.label}
-              </Link>
+              </AdminNavItem>
             );
           })}
         </nav>
@@ -49,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </aside>
 
-      <section className={styles.content}>{children}</section>
+      <AdminContentWrapper>{children}</AdminContentWrapper>
     </main>
   );
 }

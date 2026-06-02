@@ -164,10 +164,14 @@
 .toolbar button,
 .button,
 .saveButton {
+  align-items: center;
   border: 0;
   border-radius: 8px;
   cursor: pointer;
+  display: inline-flex;
   font-weight: 900;
+  gap: 8px;
+  justify-content: center;
   min-height: 42px;
   padding: 0 14px;
 }
@@ -183,6 +187,11 @@
 .saveButton {
   background: #1f84ba;
   color: #ffffff;
+}
+
+.saveButton:disabled {
+  cursor: progress;
+  opacity: 0.68;
 }
 
 .calendarGrid {
@@ -368,6 +377,35 @@
   resize: vertical;
 }
 
+.formError {
+  background: #fff1f1;
+  border: 1px solid #f1b6b6;
+  border-radius: 8px;
+  color: #9a2a2a;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.confirmBox {
+  background: #fff8f8;
+  border: 1px solid #f1caca;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.confirmBox strong {
+  color: #8a2525;
+}
+
+.confirmBox span {
+  color: #6c4545;
+  line-height: 1.45;
+}
+
 .formRow {
   display: grid;
   gap: 12px;
@@ -441,6 +479,185 @@
   min-height: 42px;
   padding: 0 14px;
   width: fit-content;
+}
+
+.dangerButton:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
+.secondaryButton {
+  background: #ffffff;
+  border: 1px solid #cfe0e3;
+  border-radius: 8px;
+  color: #24485d;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 14px;
+}
+
+.scheduleSummaryHeader {
+  align-items: flex-start;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.scheduleSummaryHeader h2,
+.scheduleSummaryHeader p {
+  margin: 0;
+}
+
+.scheduleSummaryHeader p {
+  margin-top: 6px;
+}
+
+.scheduleStats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.scheduleStats div {
+  background: #f8fbfb;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  padding: 14px;
+}
+
+.scheduleStats span {
+  color: #5e7784;
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.scheduleStats strong {
+  color: #143047;
+  display: block;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.emptyState {
+  background: #f8fbfb;
+  border: 1px dashed #bcd4d8;
+  border-radius: 8px;
+  padding: 28px;
+  text-align: center;
+}
+
+.emptyState h3,
+.emptyState p {
+  margin: 0;
+}
+
+.emptyState p {
+  margin-top: 8px;
+}
+
+.scheduleTableWrap {
+  border: 1px solid #e6f0f1;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.scheduleTable th,
+.scheduleTable td {
+  white-space: nowrap;
+}
+
+.scheduleTable th:last-child,
+.scheduleTable td:last-child {
+  text-align: right;
+}
+
+.tableActions {
+  align-items: center;
+  display: inline-flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tableActions form {
+  display: inline-flex;
+}
+
+.iconButton {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cfe0e3;
+  border-radius: 8px;
+  color: #24485d;
+  cursor: pointer;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  padding: 0;
+  width: 38px;
+}
+
+.iconButton:hover {
+  background: #e9f8f0;
+  border-color: #b9dcd2;
+  color: #1f7660;
+}
+
+.iconButtonDanger {
+  background: #fff8f8;
+  border-color: #f1caca;
+  color: #9a2a2a;
+}
+
+.iconButtonDanger:hover {
+  background: #fff1f1;
+  border-color: #f1b6b6;
+  color: #9a2a2a;
+}
+
+.modalBackdrop {
+  align-items: center;
+  background: rgba(12, 34, 48, 0.48);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 1300;
+}
+
+.modalPanel {
+  background: #ffffff;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(13, 43, 62, 0.24);
+  max-height: min(720px, calc(100vh - 40px));
+  overflow-y: auto;
+  padding: 22px;
+  width: min(720px, 100%);
+}
+
+.modalHeader {
+  align-items: flex-start;
+  border-bottom: 1px solid #e6f0f1;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+}
+
+.modalHeader h2,
+.modalHeader p {
+  margin: 0;
+}
+
+.modalHeader p {
+  margin-top: 6px;
 }
 
 /* ── Hamburger button (hidden on desktop) ── */
@@ -554,8 +771,28 @@
   .grid,
   .calendarGrid,
   .featureGrid,
-  .formRow {
+  .formRow,
+  .scheduleStats {
     grid-template-columns: 1fr;
+  }
+
+  .scheduleSummaryHeader,
+  .modalHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scheduleSummaryHeader .saveButton {
+    width: 100%;
+  }
+
+  .modalBackdrop {
+    align-items: flex-end;
+    padding: 12px;
+  }
+
+  .modalPanel {
+    max-height: calc(100vh - 24px);
   }
 
   .calendarDay {

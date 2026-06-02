@@ -1,16 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
+import { createAppointment, type AppointmentFormState } from "@/app/actions/appointments";
 import { appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
-
-const daySchedule: Record<number, { start: string; end: string }> = {
-  1: { start: "15:00", end: "20:00" },
-  3: { start: "08:00", end: "14:30" },
-  4: { start: "15:00", end: "20:00" },
-  5: { start: "15:00", end: "20:00" },
-};
 
 function toMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
@@ -42,10 +36,10 @@ function monthLabel(date: Date) {
   }).format(date);
 }
 
-function buildSlots(start: string, end: string) {
+function buildSlots(start: string, end: string, durationMin: number) {
   const slots = [];
   const close = toMinutes(end);
-  for (let time = toMinutes(start); time + 30 <= close; time += 30) {
+  for (let time = toMinutes(start); time + durationMin <= close; time += durationMin) {
     slots.push(toTime(time));
   }
   return slots;
@@ -56,8 +50,43 @@ type BookingServiceOption = {
   name: string;
 };
 
-export function BookingForm({ services }: { services: BookingServiceOption[] }) {
+type BookingScheduleOption = {
+  id: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  durationMin: number;
+};
+
+type OccupiedSlot = {
+  date: string;
+  time: string;
+};
+
+const initialState: AppointmentFormState = {
+  message: "",
+  status: "idle",
+};
+
+export function BookingForm({
+  occupiedSlots,
+  schedule,
+  services,
+}: {
+  occupiedSlots: OccupiedSlot[];
+  schedule: BookingScheduleOption[];
+  services: BookingServiceOption[];
+}) {
+  const [formState, formAction] = useActionState(createAppointment, initialState);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const occupiedSlotValues = useMemo(() => new Set(occupiedSlots.map((slot) => `${slot.date}|${slot.time}`)), [occupiedSlots]);
+  const scheduleByWeekday = useMemo(() => {
+    return schedule.reduce<Record<number, BookingScheduleOption[]>>((acc, slot) => {
+      acc[slot.dayOfWeek] = [...(acc[slot.dayOfWeek] ?? []), slot];
+      return acc;
+    }, {});
+  }, [schedule]);
+
   const availableDates = useMemo(() => {
     const dates = [];
     const today = new Date();
@@ -66,7 +95,10 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
       const date = new Date(today);
       date.setDate(today.getDate() + offset);
 
-      if (daySchedule[date.getDay()]) {
+      const daySlots = (scheduleByWeekday[date.getDay()] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin));
+      const freeSlots = daySlots.filter((slot) => !occupiedSlotValues.has(`${dateValue(date)}|${slot}`));
+
+      if (freeSlots.length) {
         dates.push({
           value: dateValue(date),
           label: labelDate(date),
@@ -76,7 +108,7 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
     }
 
     return dates;
-  }, []);
+  }, [occupiedSlotValues, scheduleByWeekday]);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [phone, setPhone] = useState("");
@@ -87,9 +119,11 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
   });
   const availableDateValues = useMemo(() => new Set(availableDates.map((date) => date.value)), [availableDates]);
   const selectedDateMeta = availableDates.find((date) => date.value === selectedDate);
-  const slots = selectedDateMeta ? buildSlots(daySchedule[selectedDateMeta.weekday].start, daySchedule[selectedDateMeta.weekday].end) : [];
+  const slots = selectedDateMeta
+    ? (scheduleByWeekday[selectedDateMeta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
+      .filter((slot) => !occupiedSlotValues.has(`${selectedDateMeta.value}|${slot}`))
+    : [];
   const [selectedTime, setSelectedTime] = useState("");
-  const [sent, setSent] = useState(false);
 
   useEffect(() => {
     if (!isDatePickerOpen) {
@@ -109,7 +143,10 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
   function onDateChange(value: string) {
     setSelectedDate(value);
     const meta = availableDates.find((date) => date.value === value);
-    const nextSlots = meta ? buildSlots(daySchedule[meta.weekday].start, daySchedule[meta.weekday].end) : [];
+    const nextSlots = meta
+      ? (scheduleByWeekday[meta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
+        .filter((slot) => !occupiedSlotValues.has(`${meta.value}|${slot}`))
+      : [];
     setSelectedTime(nextSlots[0] ?? "");
   }
 
@@ -143,10 +180,7 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
   return (
     <form
       className={styles.bookingForm}
-      onSubmit={(event) => {
-        event.preventDefault();
-        setSent(true);
-      }}
+      action={formAction}
     >
       <div className={styles.formGrid}>
         <label>
@@ -162,6 +196,7 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
               placeholder="Selecteaza data"
               readOnly
               required
+              disabled={availableDates.length === 0}
               type="text"
               value={selectedDateLabel}
             />
@@ -226,8 +261,8 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
 
         <label>
           <span><Clock size={18} /> Ora</span>
-          <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required disabled={!selectedDate}>
-            {!selectedDate ? <option value="">Alege mai intai data</option> : null}
+          <select name="time" value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required disabled={!selectedDate}>
+            {!selectedDate ? <option value="">{availableDates.length === 0 ? "Nu exista program disponibil" : "Alege mai intai data"}</option> : null}
             {slots.map((slot) => (
               <option key={slot} value={slot}>
                 {slot}
@@ -293,14 +328,14 @@ export function BookingForm({ services }: { services: BookingServiceOption[] }) 
         <p>{appointmentNotice}</p>
       </div>
 
-      <button className={styles.primaryButton} disabled={services.length === 0} type="submit">
+      <button className={styles.primaryButton} disabled={services.length === 0 || availableDates.length === 0} type="submit">
         Trimite cererea de programare
       </button>
 
-      {sent ? (
-        <div className={styles.successBox} role="status">
+      {formState.status !== "idle" ? (
+        <div className={formState.status === "error" ? styles.errorBox : styles.successBox} role="status">
           <CheckCircle2 size={20} />
-          Cererea a fost pregatita. Urmatorul pas este conectarea formularului la confirmari prin email, telefon sau WhatsApp.
+          {formState.message}
         </div>
       ) : null}
     </form>

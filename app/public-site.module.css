@@ -632,7 +632,8 @@
 }
 
 .noticeBox,
-.successBox {
+.successBox,
+.errorBox {
   align-items: flex-start;
   border-radius: 8px;
   display: flex;
@@ -655,6 +656,12 @@
   background: #e9f8f0;
   border: 1px solid #bfe9ce;
   color: #24523e;
+}
+
+.errorBox {
+  background: #fff1f1;
+  border: 1px solid #f1b6b6;
+  color: #9a2a2a;
 }
 
 .bookingForm .primaryButton {

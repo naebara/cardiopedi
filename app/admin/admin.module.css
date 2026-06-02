@@ -351,6 +351,7 @@
 }
 
 .serviceForm input,
+.serviceForm select,
 .serviceForm textarea {
   background: #ffffff;
   border: 1px solid #cfe0e3;

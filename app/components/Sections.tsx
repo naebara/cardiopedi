@@ -1,8 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, ArrowRight, Baby, CalendarCheck, CheckCircle2, Clock, HeartPulse, ShieldCheck, Stethoscope } from "lucide-react";
+import type { PublicScheduleSlot } from "@/lib/schedule";
 import type { PublicService } from "@/lib/services";
-import { clinic, schedule } from "../site-data";
+import { clinic } from "../site-data";
 import styles from "../public-site.module.css";
 
 export function Hero() {
@@ -99,7 +100,11 @@ export function ServicesSection({ compact = false, services }: { compact?: boole
   );
 }
 
-export function ScheduleSection() {
+export function ScheduleSection({ schedule }: { schedule: PublicScheduleSlot[] }) {
+  if (schedule.length === 0) {
+    return null;
+  }
+
   return (
     <section className={styles.splitSection}>
       <div>
@@ -116,8 +121,8 @@ export function ScheduleSection() {
 
       <div className={styles.schedulePanel}>
         {schedule.map((item) => (
-          <div key={item.day}>
-            <span><Clock size={18} /> {item.day}</span>
+          <div key={item.id}>
+            <span><Clock size={18} /> {item.dayLabel}</span>
             <strong>{item.interval}</strong>
           </div>
         ))}

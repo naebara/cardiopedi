@@ -1,8 +1,11 @@
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
 import { AboutSection, CarePrinciples } from "../components/Sections";
+import { getPublicScheduleSlots } from "@/lib/schedule";
 import styles from "../public-site.module.css";
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const schedule = await getPublicScheduleSlots();
+
   return (
     <main className={styles.siteShell}>
       <PublicHeader />
@@ -12,7 +15,7 @@ export default function AboutPage() {
       </section>
       <AboutSection />
       <CarePrinciples />
-      <PublicFooter />
+      <PublicFooter schedule={schedule} />
     </main>
   );
 }

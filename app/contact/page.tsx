@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
-import { clinic, schedule } from "../site-data";
+import { getPublicScheduleSlots } from "@/lib/schedule";
+import { clinic } from "../site-data";
 import styles from "../public-site.module.css";
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const schedule = await getPublicScheduleSlots();
+
   return (
     <main className={styles.siteShell}>
       <PublicHeader />
@@ -24,14 +27,14 @@ export default function ContactPage() {
           <p><MapPin size={18} /> {clinic.address}</p>
           <hr />
           {schedule.map((item) => (
-            <p key={item.day}>
-              <span>{item.day}</span>
+            <p key={item.id}>
+              <span>{item.dayLabel}</span>
               <strong>{item.interval}</strong>
             </p>
           ))}
         </div>
       </section>
-      <PublicFooter />
+      <PublicFooter schedule={schedule} />
     </main>
   );
 }

@@ -96,8 +96,7 @@ export function AdminCalendarGrid({ currentDate, view, appointments }: AdminCale
             return (
               <div key={val} style={{ flex: 1, position: "relative", borderLeft: "1px solid #f1f3f5" }}>
                 {dayAppointments.map((apt) => {
-                  const durationMin = 30; // Implicit duration since we only have `time` in our mock data
-                  const { top, height } = calculateEventPosition(apt.time, durationMin, START_HOUR, PIXELS_PER_HOUR);
+                  const { top, height } = calculateEventPosition(apt.time, apt.durationMin, START_HOUR, PIXELS_PER_HOUR);
 
                   let color = "blue";
                   if (apt.status === "Noua") color = "yellow";

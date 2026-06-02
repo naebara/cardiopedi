@@ -208,3 +208,121 @@ export async function deleteMedicalService(formData: FormData) {
   revalidatePath("/programari");
   revalidatePath("/admin/setari/servicii");
 }
+
+function parseDayOfWeek(value: FormDataEntryValue | null) {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 6 ? parsed : null;
+}
+
+function parseDurationMin(value: FormDataEntryValue | null) {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : 30;
+}
+
+function isTimeValue(value: string) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function readScheduleSlotForm(formData: FormData) {
+  const dayOfWeek = parseDayOfWeek(formData.get("dayOfWeek"));
+  const startTime = String(formData.get("startTime") ?? "").trim();
+  const endTime = String(formData.get("endTime") ?? "").trim();
+  const durationMin = parseDurationMin(formData.get("durationMin"));
+
+  if (dayOfWeek === null || !isTimeValue(startTime) || !isTimeValue(endTime) || startTime >= endTime) {
+    return null;
+  }
+
+  return {
+    dayOfWeek,
+    durationMin,
+    endTime,
+    isPaused: formData.get("isPaused") === "on",
+    sortOrder: parseSortOrder(formData.get("sortOrder")),
+    startTime,
+  };
+}
+
+export async function createScheduleSlot(formData: FormData) {
+  await requireFeature("schedule.manage");
+  const slot = readScheduleSlotForm(formData);
+
+  if (!slot) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    INSERT INTO "ClinicScheduleSlot" (
+      "id",
+      "dayOfWeek",
+      "startTime",
+      "endTime",
+      "durationMin",
+      "isPaused",
+      "sortOrder",
+      "updatedAt"
+    )
+    VALUES (
+      ${crypto.randomUUID()},
+      ${slot.dayOfWeek},
+      ${slot.startTime},
+      ${slot.endTime},
+      ${slot.durationMin},
+      ${slot.isPaused},
+      ${slot.sortOrder},
+      NOW()
+    )
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/contact");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/program");
+}
+
+export async function updateScheduleSlot(formData: FormData) {
+  await requireFeature("schedule.manage");
+  const slotId = String(formData.get("slotId") ?? "");
+  const slot = readScheduleSlotForm(formData);
+
+  if (!slotId || !slot) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "ClinicScheduleSlot"
+    SET
+      "dayOfWeek" = ${slot.dayOfWeek},
+      "startTime" = ${slot.startTime},
+      "endTime" = ${slot.endTime},
+      "durationMin" = ${slot.durationMin},
+      "isPaused" = ${slot.isPaused},
+      "sortOrder" = ${slot.sortOrder},
+      "updatedAt" = NOW()
+    WHERE "id" = ${slotId}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/contact");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/program");
+}
+
+export async function deleteScheduleSlot(formData: FormData) {
+  await requireFeature("schedule.manage");
+  const slotId = String(formData.get("slotId") ?? "");
+
+  if (!slotId) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    DELETE FROM "ClinicScheduleSlot"
+    WHERE "id" = ${slotId}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/contact");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/program");
+}

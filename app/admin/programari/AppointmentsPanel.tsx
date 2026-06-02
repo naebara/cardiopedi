@@ -1,64 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ActionIcon, Button, Group, Title } from "@mantine/core";
 import { ChevronLeft, ChevronRight, List as ListIcon } from "lucide-react";
 import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
 import { AdminMonthGrid } from "./components/AdminMonthGrid";
 import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
 import { monthLabel } from "./lib/admin-calendar-utils";
-import styles from "../admin.module.css";
 
-const appointments: Appointment[] = [
-  {
-    id: "apt-1",
-    date: "2026-06-03",
-    day: "Miercuri",
-    time: "08:30",
-    childName: "Maria Ionescu",
-    parentName: "Ana Ionescu",
-    service: "Pachet consult + eco + EKG",
-    phone: "0712345678",
-    status: "Confirmata",
-  },
-  {
-    id: "apt-2",
-    date: "2026-06-03",
-    day: "Miercuri",
-    time: "10:00",
-    childName: "Andrei Pop",
-    parentName: "Mihai Pop",
-    service: "Control",
-    phone: "0723456789",
-    status: "Noua",
-  },
-  {
-    id: "apt-3",
-    date: "2026-06-04",
-    day: "Joi",
-    time: "16:30",
-    childName: "Sofia Stan",
-    parentName: "Elena Stan",
-    service: "EKG",
-    phone: "0734567890",
-    status: "Confirmata",
-  },
-  {
-    id: "apt-4",
-    date: "2026-06-05",
-    day: "Vineri",
-    time: "18:00",
-    childName: "Vlad Marin",
-    parentName: "Ioana Marin",
-    service: "Monitorizare EKG / TA 24h",
-    phone: "0745678901",
-    status: "Noua",
-  },
-];
-
-export function AppointmentsPanel() {
+export function AppointmentsPanel({ appointments }: { appointments: Appointment[] }) {
   const [view, setView] = useState<"day" | "week" | "month" | "list">("week");
-  const [currentDate, setCurrentDate] = useState(() => new Date("2026-06-03T12:00:00")); // Hardcoded to match our mock data for demo purposes
+  const [currentDate, setCurrentDate] = useState(() => new Date());
 
   const goNext = () => {
     setCurrentDate((prev) => {
@@ -83,9 +35,6 @@ export function AppointmentsPanel() {
   const goToday = () => {
     setCurrentDate(new Date());
   };
-
-  // Basic filtering for list view (just showing all in our mock for now, but in reality would fetch based on date)
-  const visibleAppointments = useMemo(() => appointments, []);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", padding: "16px 24px", backgroundColor: "#fff" }}>
@@ -163,11 +112,11 @@ export function AppointmentsPanel() {
 
       {/* Main Content Area */}
       {view === "month" ? (
-        <AdminMonthGrid currentDate={currentDate} appointments={visibleAppointments} />
+        <AdminMonthGrid currentDate={currentDate} appointments={appointments} />
       ) : view === "day" || view === "week" ? (
-        <AdminCalendarGrid currentDate={currentDate} view={view} appointments={visibleAppointments} />
+        <AdminCalendarGrid currentDate={currentDate} view={view} appointments={appointments} />
       ) : (
-        <AdminAppointmentsList appointments={visibleAppointments} />
+        <AdminAppointmentsList appointments={appointments} />
       )}
     </div>
   );

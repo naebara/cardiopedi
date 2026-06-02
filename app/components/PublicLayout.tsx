@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { HeartPulse, MapPin, Menu, Phone } from "lucide-react";
-import { clinic, schedule } from "../site-data";
+import type { PublicScheduleSlot } from "@/lib/schedule";
+import { clinic } from "../site-data";
 import styles from "../public-site.module.css";
 
 const navigation = [
@@ -41,7 +42,7 @@ export function PublicHeader() {
   );
 }
 
-export function PublicFooter() {
+export function PublicFooter({ schedule = [] }: { schedule?: PublicScheduleSlot[] }) {
   return (
     <footer className={styles.footer}>
       <div>
@@ -52,17 +53,19 @@ export function PublicFooter() {
         <p>Cardiologie pediatrica intr-un cadru calm, prietenos si atent la fiecare copil.</p>
       </div>
 
-      <div>
-        <h3>Program</h3>
-        <ul>
-          {schedule.map((item) => (
-            <li key={item.day}>
-              <span>{item.day}</span>
-              <strong>{item.interval}</strong>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {schedule.length > 0 ? (
+        <div>
+          <h3>Program</h3>
+          <ul>
+            {schedule.map((item) => (
+              <li key={item.id}>
+                <span>{item.dayLabel}</span>
+                <strong>{item.interval}</strong>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div>
         <h3>Contact</h3>

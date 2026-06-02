@@ -5,10 +5,13 @@ export type Appointment = {
   date: string;
   day: string;
   time: string;
+  durationMin: number;
   childName: string;
   parentName: string;
   service: string;
   phone: string;
+  email: string | null;
+  notes: string | null;
   status: string;
 };
 

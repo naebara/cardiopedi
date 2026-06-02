@@ -1,10 +1,11 @@
 import { AboutSection, Hero, ServicesSection, TrustBar } from "./components/Sections";
 import { PublicFooter, PublicHeader } from "./components/PublicLayout";
+import { getPublicScheduleSlots } from "@/lib/schedule";
 import { getPublicServices } from "@/lib/services";
 import styles from "./public-site.module.css";
 
 export default async function Home() {
-  const services = await getPublicServices();
+  const [services, schedule] = await Promise.all([getPublicServices(), getPublicScheduleSlots()]);
 
   return (
     <main className={styles.siteShell}>
@@ -13,7 +14,7 @@ export default async function Home() {
       <TrustBar />
       <ServicesSection compact services={services} />
       <AboutSection />
-      <PublicFooter />
+      <PublicFooter schedule={schedule} />
     </main>
   );
 }

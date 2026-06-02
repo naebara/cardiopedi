@@ -1,13 +1,26 @@
 import { BookingForm } from "../components/BookingForm";
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
+import { getOccupiedAppointmentSlots } from "@/lib/appointments";
+import { getPublicScheduleSlots } from "@/lib/schedule";
 import { getPublicServices } from "@/lib/services";
 import styles from "../public-site.module.css";
 
 export default async function AppointmentsPage() {
-  const services = await getPublicServices();
+  const [services, schedule, occupiedSlots] = await Promise.all([
+    getPublicServices(),
+    getPublicScheduleSlots(),
+    getOccupiedAppointmentSlots(),
+  ]);
   const serviceOptions = services.map((service) => ({
     id: service.id,
     name: service.name,
+  }));
+  const scheduleOptions = schedule.map((slot) => ({
+    dayOfWeek: slot.dayOfWeek,
+    durationMin: slot.durationMin,
+    endTime: slot.endTime,
+    id: slot.id,
+    startTime: slot.startTime,
   }));
 
   return (
@@ -19,9 +32,9 @@ export default async function AppointmentsPage() {
           <h1>Programare rapida, fara cont.</h1>
           <p>Selecteaza data, ora si lasa datele de contact.</p>
         </div>
-        <BookingForm services={serviceOptions} />
+        <BookingForm occupiedSlots={occupiedSlots} schedule={scheduleOptions} services={serviceOptions} />
       </section>
-      <PublicFooter />
+      <PublicFooter schedule={schedule} />
     </main>
   );
 }

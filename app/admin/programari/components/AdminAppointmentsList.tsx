@@ -1,3 +1,4 @@
+import { Badge } from "@mantine/core";
 import styles from "../../admin.module.css";
 
 export type Appointment = {
@@ -17,40 +18,58 @@ export type Appointment = {
 
 interface AdminAppointmentsListProps {
   appointments: Appointment[];
+  onSelect?: (appointment: Appointment) => void;
 }
 
-export function AdminAppointmentsList({ appointments }: AdminAppointmentsListProps) {
+const statusColor: Record<string, string> = {
+  Cancelata: "red",
+  Confirmata: "green",
+  Finalizata: "blue",
+  Noua: "yellow",
+};
+
+export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointmentsListProps) {
   return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Ora</th>
-          <th>Copil</th>
-          <th>Serviciu</th>
-          <th>Contact</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        {appointments.map((appointment) => (
-          <tr key={appointment.id}>
-            <td>{appointment.day}, {appointment.date}</td>
-            <td>{appointment.time}</td>
-            <td>{appointment.childName}<br /><small>{appointment.parentName}</small></td>
-            <td>{appointment.service}</td>
-            <td>{appointment.phone}</td>
-            <td><span className={styles.status}>{appointment.status}</span></td>
-          </tr>
-        ))}
-        {appointments.length === 0 && (
+    <div style={{ flex: 1, overflowY: "auto" }}>
+      <table className={styles.table}>
+        <thead>
           <tr>
-            <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "var(--mantine-color-gray-6)" }}>
-              Nu există programări pentru perioada selectată.
-            </td>
+            <th>Data</th>
+            <th>Ora</th>
+            <th>Copil</th>
+            <th>Serviciu</th>
+            <th>Contact</th>
+            <th>Status</th>
           </tr>
-        )}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {appointments.map((appointment) => (
+            <tr
+              key={appointment.id}
+              onClick={() => onSelect?.(appointment)}
+              style={{ cursor: onSelect ? "pointer" : "default" }}
+            >
+              <td>{appointment.day}, {appointment.date}</td>
+              <td>{appointment.time}</td>
+              <td>{appointment.childName}<br /><small>{appointment.parentName}</small></td>
+              <td>{appointment.service}</td>
+              <td>{appointment.phone}</td>
+              <td>
+                <Badge color={statusColor[appointment.status] ?? "gray"} variant="light" radius="sm">
+                  {appointment.status}
+                </Badge>
+              </td>
+            </tr>
+          ))}
+          {appointments.length === 0 && (
+            <tr>
+              <td colSpan={6} style={{ textAlign: "center", padding: "32px", color: "var(--mantine-color-gray-6)" }}>
+                Nu există programări pentru perioada selectată.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }

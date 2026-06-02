@@ -1,5 +1,4 @@
-import { Box, Popover, Text, Group } from "@mantine/core";
-import { Info, Phone, UserRound } from "lucide-react";
+import { Box, Text } from "@mantine/core";
 import { dateValue, getDatesOfWeek, labelDateShort, calculateEventPosition } from "../lib/admin-calendar-utils";
 import type { Appointment } from "./AdminAppointmentsList";
 
@@ -7,13 +6,14 @@ interface AdminCalendarGridProps {
   currentDate: Date; // represents the day or week we are looking at
   view: "day" | "week";
   appointments: Appointment[];
+  onSelect?: (appointment: Appointment) => void;
 }
 
 const START_HOUR = 8;
 const END_HOUR = 20;
 const PIXELS_PER_HOUR = 60; // 60px height per hour => 1 minute = 1px
 
-export function AdminCalendarGrid({ currentDate, view, appointments }: AdminCalendarGridProps) {
+export function AdminCalendarGrid({ currentDate, view, appointments, onSelect }: AdminCalendarGridProps) {
   const dates = view === "day" ? [currentDate] : getDatesOfWeek(currentDate);
 
   // Group appointments by date string
@@ -104,48 +104,28 @@ export function AdminCalendarGrid({ currentDate, view, appointments }: AdminCale
                   if (apt.status === "Confirmata") color = "green";
 
                   return (
-                    <Popover key={apt.id} width={280} position="right" withArrow shadow="md">
-                      <Popover.Target>
-                        <Box
-                          style={{
-                            position: "absolute",
-                            top: `${top}px`,
-                            left: "4px",
-                            right: "4px",
-                            height: `${height}px`,
-                            backgroundColor: `var(--mantine-color-${color}-1)`,
-                            borderLeft: `4px solid var(--mantine-color-${color}-6)`,
-                            borderRadius: "4px",
-                            padding: "2px 6px",
-                            cursor: "pointer",
-                            overflow: "hidden",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)"
-                          }}
-                        >
-                          <Text size="xs" fw={700} c={`${color}.9`} lh={1.2}>{apt.time}</Text>
-                          <Text size="xs" c={`${color}.9`} lh={1.1} truncate>{apt.childName}</Text>
-                        </Box>
-                      </Popover.Target>
-                      <Popover.Dropdown p="sm">
-                        <Text size="sm" fw={600} mb="xs">{apt.service}</Text>
-                        <Group gap="xs" mb={4}>
-                          <UserRound size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">Copil: {apt.childName}</Text>
-                        </Group>
-                        <Group gap="xs" mb={4}>
-                          <UserRound size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">Părinte: {apt.parentName}</Text>
-                        </Group>
-                        <Group gap="xs" mb={4}>
-                          <Phone size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">{apt.phone}</Text>
-                        </Group>
-                        <Group gap="xs" mt="sm">
-                          <Info size={14} className="mantine-text-dimmed" />
-                          <Text size="xs" fw={500} c={`${color}.7`}>Status: {apt.status}</Text>
-                        </Group>
-                      </Popover.Dropdown>
-                    </Popover>
+                    <Box
+                      key={apt.id}
+                      onClick={() => onSelect?.(apt)}
+                      style={{
+                        position: "absolute",
+                        top: `${top}px`,
+                        left: "4px",
+                        right: "4px",
+                        height: `${height}px`,
+                        backgroundColor: `var(--mantine-color-${color}-1)`,
+                        borderLeft: `4px solid var(--mantine-color-${color}-6)`,
+                        borderRadius: "4px",
+                        padding: "2px 6px",
+                        cursor: "pointer",
+                        overflow: "hidden",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                        transition: "filter 0.12s ease",
+                      }}
+                    >
+                      <Text size="xs" fw={700} c={`${color}.9`} lh={1.2}>{apt.time}</Text>
+                      <Text size="xs" c={`${color}.9`} lh={1.1} truncate>{apt.childName}</Text>
+                    </Box>
                   );
                 })}
               </div>

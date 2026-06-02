@@ -1,14 +1,14 @@
-import { Box, Popover, Text, Group } from "@mantine/core";
-import { Info, Phone, UserRound } from "lucide-react";
+import { Box, Text } from "@mantine/core";
 import { dateValue, getDatesOfMonthView, labelDateShort } from "../lib/admin-calendar-utils";
 import type { Appointment } from "./AdminAppointmentsList";
 
 interface AdminMonthGridProps {
   currentDate: Date;
   appointments: Appointment[];
+  onSelect?: (appointment: Appointment) => void;
 }
 
-export function AdminMonthGrid({ currentDate, appointments }: AdminMonthGridProps) {
+export function AdminMonthGrid({ currentDate, appointments, onSelect }: AdminMonthGridProps) {
   const dates = getDatesOfMonthView(currentDate);
 
   const groupedByDate = new Map<string, Appointment[]>();
@@ -68,44 +68,23 @@ export function AdminMonthGrid({ currentDate, appointments }: AdminMonthGridProp
                   if (apt.status === "Confirmata") color = "green";
 
                   return (
-                    <Popover key={apt.id} width={280} position="right" withArrow shadow="md">
-                      <Popover.Target>
-                        <Box
-                          style={{
-                            backgroundColor: `var(--mantine-color-${color}-1)`,
-                            borderLeft: `3px solid var(--mantine-color-${color}-6)`,
-                            borderRadius: "4px",
-                            padding: "2px 6px",
-                            cursor: "pointer",
-                            overflow: "hidden",
-                            whiteSpace: "nowrap",
-                            textOverflow: "ellipsis"
-                          }}
-                        >
-                          <Text size="xs" fw={700} c={`${color}.9`} component="span" mr={4}>{apt.time}</Text>
-                          <Text size="xs" c={`${color}.9`} component="span">{apt.childName}</Text>
-                        </Box>
-                      </Popover.Target>
-                      <Popover.Dropdown p="sm">
-                        <Text size="sm" fw={600} mb="xs">{apt.service}</Text>
-                        <Group gap="xs" mb={4}>
-                          <UserRound size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">Copil: {apt.childName}</Text>
-                        </Group>
-                        <Group gap="xs" mb={4}>
-                          <UserRound size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">Părinte: {apt.parentName}</Text>
-                        </Group>
-                        <Group gap="xs" mb={4}>
-                          <Phone size={14} className="mantine-text-dimmed" />
-                          <Text size="xs">{apt.phone}</Text>
-                        </Group>
-                        <Group gap="xs" mt="sm">
-                          <Info size={14} className="mantine-text-dimmed" />
-                          <Text size="xs" fw={500} c={`${color}.7`}>Status: {apt.status}</Text>
-                        </Group>
-                      </Popover.Dropdown>
-                    </Popover>
+                    <Box
+                      key={apt.id}
+                      onClick={() => onSelect?.(apt)}
+                      style={{
+                        backgroundColor: `var(--mantine-color-${color}-1)`,
+                        borderLeft: `3px solid var(--mantine-color-${color}-6)`,
+                        borderRadius: "4px",
+                        padding: "2px 6px",
+                        cursor: "pointer",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      <Text size="xs" fw={700} c={`${color}.9`} component="span" mr={4}>{apt.time}</Text>
+                      <Text size="xs" c={`${color}.9`} component="span">{apt.childName}</Text>
+                    </Box>
                   );
                 })}
               </div>

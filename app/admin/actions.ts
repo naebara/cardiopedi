@@ -326,3 +326,42 @@ export async function deleteScheduleSlot(formData: FormData) {
   revalidatePath("/programari");
   revalidatePath("/admin/setari/program");
 }
+
+export async function confirmAppointment(appointmentId: string) {
+  await requireFeature("appointments.manage");
+
+  const id = String(appointmentId ?? "").trim();
+
+  if (!id) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "Appointment"
+    SET "status" = 'CONFIRMED', "updatedAt" = NOW()
+    WHERE "id" = ${id}
+  `;
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/programari");
+}
+
+export async function deleteAppointment(appointmentId: string) {
+  await requireFeature("appointments.manage");
+
+  const id = String(appointmentId ?? "").trim();
+
+  if (!id) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    DELETE FROM "Appointment"
+    WHERE "id" = ${id}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/programari");
+  revalidatePath("/admin");
+  revalidatePath("/admin/programari");
+}

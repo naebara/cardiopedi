@@ -310,14 +310,233 @@
   padding: 14px;
 }
 
-@media (max-width: 960px) {
+.sectionTitle,
+.serviceEditorHeader,
+.actionRow {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.sectionTitle {
+  margin-bottom: 18px;
+}
+
+.sectionTitle h2,
+.panel h2,
+.serviceEditor h3 {
+  color: #143047;
+  margin: 0;
+}
+
+.panel h2 {
+  margin-bottom: 16px;
+}
+
+.serviceForm {
+  display: grid;
+  gap: 14px;
+}
+
+.serviceForm label {
+  display: grid;
+  gap: 7px;
+}
+
+.serviceForm label span {
+  color: #24485d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.serviceForm input,
+.serviceForm textarea {
+  background: #ffffff;
+  border: 1px solid #cfe0e3;
+  border-radius: 8px;
+  color: #143047;
+  font: inherit;
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.serviceForm textarea {
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.formRow {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.checkRow {
+  align-items: center;
+  background: #f8fbfb;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  display: flex !important;
+  gap: 10px !important;
+  padding: 12px;
+}
+
+.checkRow input {
+  min-height: auto;
+  width: auto;
+}
+
+.serviceAdminList {
+  display: grid;
+  gap: 16px;
+}
+
+.serviceEditor {
+  background: #f8fbfb;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.serviceEditorHeader {
+  border-bottom: 1px solid #d7e8ea;
+  padding-bottom: 12px;
+}
+
+.serviceEditorHeader p {
+  margin: 6px 0 0;
+}
+
+.statusLive,
+.statusPaused {
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.statusLive {
+  background: #e9f8f0;
+  color: #1f7660;
+}
+
+.statusPaused {
+  background: #fff7df;
+  color: #6b551e;
+}
+
+.dangerButton {
+  background: #fff1f1;
+  border: 1px solid #f1b6b6;
+  border-radius: 8px;
+  color: #9a2a2a;
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 0 14px;
+  width: fit-content;
+}
+
+/* ── Hamburger button (hidden on desktop) ── */
+.hamburger {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  cursor: pointer;
+  display: none;
+  height: 44px;
+  justify-content: center;
+  left: 16px;
+  position: fixed;
+  top: 16px;
+  width: 44px;
+  z-index: 1001;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Close button inside sidebar (hidden on desktop) ── */
+.sidebarClose {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #5e7784;
+  cursor: pointer;
+  display: none;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  right: 12px;
+  top: 16px;
+  width: 36px;
+  border-radius: 6px;
+}
+
+.sidebarClose:hover {
+  background: #e9f8f0;
+  color: #1f7660;
+}
+
+/* ── Overlay (hidden on desktop) ── */
+.sidebarOverlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
   .adminShell {
     grid-template-columns: 1fr;
   }
 
+  /* ── Hamburger visible ── */
+  .hamburger {
+    display: flex;
+  }
+
+  /* ── Sidebar as fixed drawer ── */
   .sidebar {
-    height: auto;
-    position: static;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    height: 100vh;
+    z-index: 1100;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: none;
+    overflow-y: auto;
+  }
+
+  .sidebarOpen {
+    transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .sidebarClose {
+    display: flex;
+  }
+
+  /* ── Overlay visible ── */
+  .sidebarOverlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 1050;
+    animation: overlayFadeIn 0.2s ease;
+  }
+
+  @keyframes overlayFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
 
   .sidebarFooter {
@@ -325,14 +544,29 @@
     position: static;
   }
 
+  /* ── Content takes full width, pad for hamburger ── */
+  .content {
+    padding: 70px 16px 16px;
+  }
+
   .statsGrid,
   .grid,
   .calendarGrid,
-  .featureGrid {
+  .featureGrid,
+  .formRow {
     grid-template-columns: 1fr;
   }
 
   .calendarDay {
     min-height: auto;
+  }
+
+  .table {
+    font-size: 14px;
+  }
+
+  .table th,
+  .table td {
+    padding: 10px 6px;
   }
 }

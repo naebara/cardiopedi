@@ -281,6 +281,14 @@
   margin-top: auto;
 }
 
+.serviceCard strong span {
+  color: #7b929e;
+  display: block;
+  font-size: 15px;
+  margin-top: 4px;
+  text-decoration: line-through;
+}
+
 .inlineLink {
   align-items: center;
   color: #1f84ba;

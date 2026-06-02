@@ -2,6 +2,7 @@ import { CalendarDays, HeartPulse, LayoutDashboard, LockKeyhole, Settings, Steth
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { AdminNavItem } from "./components/AdminNavItem";
 import { AdminContentWrapper } from "./components/AdminContentWrapper";
+import { AdminSidebar } from "./components/AdminSidebar";
 import { canAccess, getCurrentAdminUser } from "@/lib/admin-features";
 import styles from "./admin.module.css";
 
@@ -20,7 +21,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <main className={styles.adminShell}>
-      <aside className={styles.sidebar}>
+      <AdminSidebar>
         <div className={styles.brand}>
           <span className={styles.brandMark}><Stethoscope size={22} /></span>
           <div>
@@ -48,7 +49,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <SignOutButton />
           </div>
         </div>
-      </aside>
+      </AdminSidebar>
 
       <AdminContentWrapper>{children}</AdminContentWrapper>
     </main>

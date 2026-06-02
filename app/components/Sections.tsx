@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Activity, ArrowRight, Baby, CalendarCheck, CheckCircle2, Clock, HeartPulse, ShieldCheck, Stethoscope } from "lucide-react";
-import { clinic, schedule, services } from "../site-data";
+import type { PublicService } from "@/lib/services";
+import { clinic, schedule } from "../site-data";
 import styles from "../public-site.module.css";
 
 export function Hero() {
@@ -56,7 +57,13 @@ export function TrustBar() {
   );
 }
 
-export function ServicesSection({ compact = false }: { compact?: boolean }) {
+export function ServicesSection({ compact = false, services }: { compact?: boolean; services: PublicService[] }) {
+  const visibleServices = services.slice(0, compact ? 3 : services.length);
+
+  if (visibleServices.length === 0) {
+    return null;
+  }
+
   return (
     <section className={styles.section}>
       <div className={styles.sectionHeader}>
@@ -65,12 +72,20 @@ export function ServicesSection({ compact = false }: { compact?: boolean }) {
       </div>
 
       <div className={styles.serviceGrid}>
-        {services.slice(0, compact ? 3 : services.length).map((service) => (
-          <article className={styles.serviceCard} key={service.name}>
+        {visibleServices.map((service) => (
+          <article className={styles.serviceCard} key={service.id}>
             <div className={styles.cardIcon}><Stethoscope size={22} /></div>
             <h3>{service.name}</h3>
             <p>{service.description}</p>
-            <strong>{service.price}</strong>
+            <strong>
+              {service.hasActiveDiscount && service.displayDiscountedPrice ? (
+                <>
+                  {service.displayDiscountedPrice} <span>{service.displayPrice}</span>
+                </>
+              ) : (
+                service.displayPrice
+              )}
+            </strong>
           </article>
         ))}
       </div>

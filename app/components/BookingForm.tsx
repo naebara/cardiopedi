@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
-import { appointmentNotice, services } from "../site-data";
+import { appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
 
 const daySchedule: Record<number, { start: string; end: string }> = {
@@ -51,7 +51,12 @@ function buildSlots(start: string, end: string) {
   return slots;
 }
 
-export function BookingForm() {
+type BookingServiceOption = {
+  id: string;
+  name: string;
+};
+
+export function BookingForm({ services }: { services: BookingServiceOption[] }) {
   const datePickerRef = useRef<HTMLDivElement>(null);
   const availableDates = useMemo(() => {
     const dates = [];
@@ -148,7 +153,6 @@ export function BookingForm() {
           <span><CalendarDays size={18} /> Data</span>
           <div className={styles.datePickerWrap} ref={datePickerRef}>
             <input
-              aria-expanded={isDatePickerOpen}
               aria-haspopup="dialog"
               onClick={() => setIsDatePickerOpen(true)}
               onFocus={() => setIsDatePickerOpen(true)}
@@ -234,9 +238,12 @@ export function BookingForm() {
 
         <label>
           <span><HeartPulse size={18} /> Serviciu</span>
-          <select required defaultValue={services[0].name}>
+          <select disabled={services.length === 0} name="service" required defaultValue="">
+            <option value="">
+              {services.length === 0 ? "Nu exista servicii disponibile" : "Alege serviciul"}
+            </option>
             {services.map((service) => (
-              <option key={service.name} value={service.name}>
+              <option key={service.id} value={service.name}>
                 {service.name}
               </option>
             ))}
@@ -286,7 +293,7 @@ export function BookingForm() {
         <p>{appointmentNotice}</p>
       </div>
 
-      <button className={styles.primaryButton} type="submit">
+      <button className={styles.primaryButton} disabled={services.length === 0} type="submit">
         Trimite cererea de programare
       </button>
 

@@ -65,6 +65,25 @@ model Appointment {
   @@index([status])
 }
 
+model MedicalService {
+  id               String    @id @default(cuid())
+  name             String
+  description      String?
+  priceCents       Int
+  currency         String    @default("RON")
+  isPaused         Boolean   @default(false)
+  discountEnabled  Boolean   @default(false)
+  discountPercent  Int       @default(0)
+  discountStartsAt DateTime?
+  discountEndsAt   DateTime?
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([isPaused])
+  @@index([sortOrder])
+}
+
 enum AppointmentStatus {
   NEW
   CONFIRMED

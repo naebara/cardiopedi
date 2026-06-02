@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ADMIN_FEATURES, isKnownFeature, requireMasterUser } from "@/lib/admin-features";
+import { ADMIN_FEATURES, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
 import { prisma } from "@/lib/prisma";
 
 export async function updateUserAccess(formData: FormData) {
@@ -45,4 +45,166 @@ export async function updateUserAccess(formData: FormData) {
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
+}
+
+function parsePriceCents(value: FormDataEntryValue | null) {
+  const normalized = String(value ?? "").replace(",", ".").trim();
+  const parsed = Number(normalized);
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return null;
+  }
+
+  return Math.round(parsed * 100);
+}
+
+function parseOptionalPercent(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return 0;
+  }
+
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 100) {
+    return 0;
+  }
+
+  return parsed;
+}
+
+function parseOptionalDate(value: FormDataEntryValue | null) {
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseSortOrder(value: FormDataEntryValue | null) {
+  const parsed = Number(String(value ?? "").trim());
+  return Number.isInteger(parsed) ? parsed : 0;
+}
+
+function readServiceForm(formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const priceCents = parsePriceCents(formData.get("price"));
+  const discountPercent = parseOptionalPercent(formData.get("discountPercent"));
+  const discountStartsAt = parseOptionalDate(formData.get("discountStartsAt"));
+  const discountEndsAt = parseOptionalDate(formData.get("discountEndsAt"));
+
+  if (!name || priceCents === null) {
+    return null;
+  }
+
+  return {
+    currency: "RON",
+    description: description || null,
+    discountEndsAt,
+    discountEnabled: formData.get("discountEnabled") === "on",
+    discountPercent,
+    discountStartsAt,
+    isPaused: formData.get("isPaused") === "on",
+    name,
+    priceCents,
+    sortOrder: parseSortOrder(formData.get("sortOrder")),
+  };
+}
+
+export async function createMedicalService(formData: FormData) {
+  await requireFeature("services.manage");
+  const service = readServiceForm(formData);
+
+  if (!service) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    INSERT INTO "MedicalService" (
+      "id",
+      "name",
+      "description",
+      "priceCents",
+      "currency",
+      "isPaused",
+      "discountEnabled",
+      "discountPercent",
+      "discountStartsAt",
+      "discountEndsAt",
+      "sortOrder",
+      "updatedAt"
+    )
+    VALUES (
+      ${crypto.randomUUID()},
+      ${service.name},
+      ${service.description},
+      ${service.priceCents},
+      ${service.currency},
+      ${service.isPaused},
+      ${service.discountEnabled},
+      ${service.discountPercent},
+      ${service.discountStartsAt},
+      ${service.discountEndsAt},
+      ${service.sortOrder},
+      NOW()
+    )
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/servicii");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/servicii");
+}
+
+export async function updateMedicalService(formData: FormData) {
+  await requireFeature("services.manage");
+  const serviceId = String(formData.get("serviceId") ?? "");
+  const service = readServiceForm(formData);
+
+  if (!serviceId || !service) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "MedicalService"
+    SET
+      "name" = ${service.name},
+      "description" = ${service.description},
+      "priceCents" = ${service.priceCents},
+      "currency" = ${service.currency},
+      "isPaused" = ${service.isPaused},
+      "discountEnabled" = ${service.discountEnabled},
+      "discountPercent" = ${service.discountPercent},
+      "discountStartsAt" = ${service.discountStartsAt},
+      "discountEndsAt" = ${service.discountEndsAt},
+      "sortOrder" = ${service.sortOrder},
+      "updatedAt" = NOW()
+    WHERE "id" = ${serviceId}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/servicii");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/servicii");
+}
+
+export async function deleteMedicalService(formData: FormData) {
+  await requireFeature("services.manage");
+  const serviceId = String(formData.get("serviceId") ?? "");
+
+  if (!serviceId) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    DELETE FROM "MedicalService"
+    WHERE "id" = ${serviceId}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/servicii");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/servicii");
 }

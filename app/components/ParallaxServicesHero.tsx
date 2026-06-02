@@ -44,7 +44,6 @@ export function ParallaxServicesHero() {
       <div className={styles.servicesHeroContent}>
         <p className={styles.eyebrow}>Servicii</p>
         <h1>Tarife transparente pentru evaluari cardiologice pediatrice.</h1>
-        <p>Aici sunt serviciile initiale comunicate pentru Cardiopedi.</p>
       </div>
     </section>
   );

@@ -9,7 +9,6 @@ export default function AboutPage() {
       <section className={styles.pageHero}>
         <p className={styles.eyebrow}>Despre</p>
         <h1>Cardiopedi, cardiologie pediatrica intr-un cadru prietenos.</h1>
-        <p>O identitate scurta, usor de tinut minte si potrivita pentru o clinica medicala pentru copii.</p>
       </section>
       <AboutSection />
       <CarePrinciples />

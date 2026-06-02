@@ -8,11 +8,15 @@ export const authConfig = {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
             const isOnAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
+            const publicPaths = ['/', '/servicii', '/programari', '/despre', '/contact'];
+            const isPublicPage = publicPaths.includes(nextUrl.pathname);
 
             if (isOnAuthPage) {
                 if (isLoggedIn) return Response.redirect(new URL('/', nextUrl));
                 return true;
             }
+
+            if (isPublicPage) return true;
 
             if (!isLoggedIn) {
                 return Response.redirect(new URL('/login', nextUrl));

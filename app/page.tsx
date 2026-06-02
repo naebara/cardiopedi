@@ -1,8 +1,17 @@
-import { auth } from "@/auth";
-import DashboardView from "./DashboardView";
+import { AboutSection, Hero, ScheduleSection, ServicesSection, TrustBar } from "./components/Sections";
+import { PublicFooter, PublicHeader } from "./components/PublicLayout";
+import styles from "./public-site.module.css";
 
-export default async function Home() {
-  const session = await auth();
-
-  return <DashboardView user={session?.user} />;
+export default function Home() {
+  return (
+    <main className={styles.siteShell}>
+      <PublicHeader />
+      <Hero />
+      <TrustBar />
+      <ServicesSection compact />
+      <ScheduleSection />
+      <AboutSection />
+      <PublicFooter />
+    </main>
+  );
 }

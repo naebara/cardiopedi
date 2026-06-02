@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
 import { appointmentNotice, services } from "../site-data";
 import styles from "../public-site.module.css";
@@ -26,11 +26,13 @@ function dateValue(date: Date) {
 }
 
 function labelDate(date: Date) {
-  return new Intl.DateTimeFormat("ro-RO", {
+  const formatted = new Intl.DateTimeFormat("ro-RO", {
     weekday: "long",
     day: "numeric",
     month: "long",
   }).format(date);
+
+  return formatted.replace(/(^|,\s)(\p{L})/gu, (_, prefix: string, letter: string) => `${prefix}${letter.toLocaleUpperCase("ro-RO")}`);
 }
 
 function monthLabel(date: Date) {
@@ -50,11 +52,12 @@ function buildSlots(start: string, end: string) {
 }
 
 export function BookingForm() {
+  const datePickerRef = useRef<HTMLDivElement>(null);
   const availableDates = useMemo(() => {
     const dates = [];
     const today = new Date();
 
-    for (let offset = 0; offset < 35 && dates.length < 14; offset += 1) {
+    for (let offset = 0; offset < 90; offset += 1) {
       const date = new Date(today);
       date.setDate(today.getDate() + offset);
 
@@ -70,7 +73,7 @@ export function BookingForm() {
     return dates;
   }, []);
 
-  const [selectedDate, setSelectedDate] = useState(availableDates[0]?.value ?? "");
+  const [selectedDate, setSelectedDate] = useState("");
   const [phone, setPhone] = useState("");
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -80,15 +83,29 @@ export function BookingForm() {
   const availableDateValues = useMemo(() => new Set(availableDates.map((date) => date.value)), [availableDates]);
   const selectedDateMeta = availableDates.find((date) => date.value === selectedDate);
   const slots = selectedDateMeta ? buildSlots(daySchedule[selectedDateMeta.weekday].start, daySchedule[selectedDateMeta.weekday].end) : [];
-  const [selectedTime, setSelectedTime] = useState(slots[0] ?? "");
+  const [selectedTime, setSelectedTime] = useState("");
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    if (!isDatePickerOpen) {
+      return;
+    }
+
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!datePickerRef.current?.contains(event.target as Node)) {
+        setIsDatePickerOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [isDatePickerOpen]);
 
   function onDateChange(value: string) {
     setSelectedDate(value);
     const meta = availableDates.find((date) => date.value === value);
     const nextSlots = meta ? buildSlots(daySchedule[meta.weekday].start, daySchedule[meta.weekday].end) : [];
     setSelectedTime(nextSlots[0] ?? "");
-    setIsDatePickerOpen(false);
   }
 
   const selectedDateLabel = selectedDateMeta?.label ?? "";
@@ -129,7 +146,7 @@ export function BookingForm() {
       <div className={styles.formGrid}>
         <label>
           <span><CalendarDays size={18} /> Data</span>
-          <div className={styles.datePickerWrap}>
+          <div className={styles.datePickerWrap} ref={datePickerRef}>
             <input
               aria-expanded={isDatePickerOpen}
               aria-haspopup="dialog"
@@ -205,7 +222,8 @@ export function BookingForm() {
 
         <label>
           <span><Clock size={18} /> Ora</span>
-          <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required>
+          <select value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required disabled={!selectedDate}>
+            {!selectedDate ? <option value="">Alege mai intai data</option> : null}
             {slots.map((slot) => (
               <option key={slot} value={slot}>
                 {slot}

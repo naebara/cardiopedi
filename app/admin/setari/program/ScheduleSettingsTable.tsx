@@ -524,7 +524,7 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
             </div>
 
             {activeModal.type === "delete" ? (
-              <form action={handleDelete}>
+              <form action={handleDelete} className={styles.modalForm}>
                 <div className={styles.form}>
                   <input name="slotId" type="hidden" value={activeModal.slot.id} />
                   <div className={styles.confirm}>
@@ -548,6 +548,7 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
             ) : (
               <form
                 action={activeModal.type === "create" ? handleCreate : handleUpdate}
+                className={styles.modalForm}
                 onChange={() => setValidationError("")}
               >
                 <div className={styles.form}>

@@ -31,13 +31,8 @@ export const services = [
     price: "100 RON",
   },
   {
-    name: "Monitorizare EKG / 24h",
-    description: "Holter EKG pentru evaluarea ritmului cardiac.",
-    price: "280 RON",
-  },
-  {
-    name: "Monitorizare TA / 24h",
-    description: "Monitorizare ambulatorie a tensiunii arteriale.",
+    name: "Monitorizare EKG / 24h si TA / 24h",
+    description: "Holter EKG si monitorizare ambulatorie a tensiunii arteriale.",
     price: "280 RON",
   },
 ];

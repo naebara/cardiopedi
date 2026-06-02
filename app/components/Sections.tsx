@@ -62,7 +62,6 @@ export function ServicesSection({ compact = false }: { compact?: boolean }) {
       <div className={styles.sectionHeader}>
         <p className={styles.eyebrow}>Servicii si tarife</p>
         <h2>Investigatii esentiale pentru inima copilului.</h2>
-        <p>Tarifele pot fi actualizate rapid in site atunci cand apar schimbari.</p>
       </div>
 
       <div className={styles.serviceGrid}>

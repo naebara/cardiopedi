@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ActionIcon, Button, Group, SegmentedControl } from "@mantine/core";
+import { ActionIcon, Button, Group, SegmentedControl, TextInput } from "@mantine/core";
 import { useMediaQuery } from "@mantine/hooks";
-import { CalendarDays, ChevronLeft, ChevronRight, List as ListIcon } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, List as ListIcon, Search } from "lucide-react";
 import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
 import { AdminMonthGrid } from "./components/AdminMonthGrid";
 import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
@@ -14,15 +14,54 @@ import styles from "./programari.module.css";
 type Period = "day" | "week" | "month";
 type Mode = "calendar" | "list";
 
-export function AppointmentsPanel({ appointments }: { appointments: Appointment[] }) {
+export type AppointmentScheduleSlot = {
+  id: string;
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  durationMin: number;
+};
+
+function appointmentMatchesSearch(appointment: Appointment, search: string) {
+  const normalized = search.trim().toLocaleLowerCase("ro-RO");
+
+  if (!normalized) {
+    return true;
+  }
+
+  return [
+    appointment.childName,
+    appointment.parentName,
+    appointment.service,
+    appointment.phone,
+    appointment.email ?? "",
+    appointment.notes ?? "",
+    appointment.status,
+    appointment.date,
+    appointment.time,
+  ].some((value) => value.toLocaleLowerCase("ro-RO").includes(normalized));
+}
+
+export function AppointmentsPanel({
+  appointments,
+  scheduleSlots,
+}: {
+  appointments: Appointment[];
+  scheduleSlots: AppointmentScheduleSlot[];
+}) {
   const [mode, setMode] = useState<Mode>("calendar");
   const [period, setPeriod] = useState<Period>("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
-  const [selected, setSelected] = useState<Appointment | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
   const isDesktop = useMediaQuery("(min-width: 1024px)", false);
-  const useDaySplit = mode === "calendar" && period === "day" && isDesktop;
+  const useCalendarSplit = mode === "calendar" && period !== "month" && isDesktop;
+  const selected = useMemo(() => {
+    return selectedId ? appointments.find((appointment) => appointment.id === selectedId) ?? null : null;
+  }, [appointments, selectedId]);
 
   const goNext = () => {
+    setSelectedId(null);
     setCurrentDate((prev) => {
       const next = new Date(prev);
       if (period === "month") next.setMonth(prev.getMonth() + 1);
@@ -33,6 +72,7 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
   };
 
   const goPrev = () => {
+    setSelectedId(null);
     setCurrentDate((prev) => {
       const prevDate = new Date(prev);
       if (period === "month") prevDate.setMonth(prev.getMonth() - 1);
@@ -42,7 +82,20 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
     });
   };
 
-  const goToday = () => setCurrentDate(new Date());
+  const goToday = () => {
+    setSelectedId(null);
+    setCurrentDate(new Date());
+  };
+
+  function changePeriod(value: string) {
+    setSelectedId(null);
+    setPeriod(value as Period);
+  }
+
+  function changeMode(value: string) {
+    setSelectedId(null);
+    setMode(value as Mode);
+  }
 
   const periodLabel = useMemo(() => {
     if (period === "day") {
@@ -62,20 +115,24 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
     return monthLabel(currentDate);
   }, [period, currentDate]);
 
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((appointment) => appointmentMatchesSearch(appointment, search));
+  }, [appointments, search]);
+
   const periodAppointments = useMemo(() => {
     if (period === "day") {
       const key = dateValue(currentDate);
-      return appointments.filter((apt) => apt.date === key);
+      return filteredAppointments.filter((apt) => apt.date === key);
     }
 
     if (period === "week") {
       const keys = new Set(getDatesOfWeek(currentDate).map(dateValue));
-      return appointments.filter((apt) => keys.has(apt.date));
+      return filteredAppointments.filter((apt) => keys.has(apt.date));
     }
 
     const monthKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}`;
-    return appointments.filter((apt) => apt.date.startsWith(monthKey));
-  }, [appointments, period, currentDate]);
+    return filteredAppointments.filter((apt) => apt.date.startsWith(monthKey));
+  }, [filteredAppointments, period, currentDate]);
 
   return (
     <div className={styles.panel}>
@@ -110,11 +167,19 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
         </div>
 
         <div className={styles.toolbarRight}>
+          <TextInput
+            className={styles.searchInput}
+            leftSection={<Search size={16} />}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            placeholder="Cauta copil, parinte, serviciu"
+            size="sm"
+            value={search}
+          />
           <SegmentedControl
-            className={styles.segmented}
+            className={`${styles.segmented} ${styles.periodSegmented}`}
             size="sm"
             value={period}
-            onChange={(value) => setPeriod(value as Period)}
+            onChange={changePeriod}
             data={[
               { label: "Azi", value: "day" },
               { label: "Săptămână", value: "week" },
@@ -122,14 +187,14 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
             ]}
           />
           <SegmentedControl
-            className={styles.segmented}
+            className={`${styles.segmented} ${styles.modeSegmented}`}
             size="sm"
             value={mode}
-            onChange={(value) => setMode(value as Mode)}
+            onChange={changeMode}
             data={[
               {
                 label: (
-                  <Group gap={6} wrap="nowrap" justify="center">
+                  <Group className={styles.segmentLabel} gap={6} wrap="nowrap" justify="center">
                     <CalendarDays size={15} />
                     <span>Calendar</span>
                   </Group>
@@ -138,7 +203,7 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
               },
               {
                 label: (
-                  <Group gap={6} wrap="nowrap" justify="center">
+                  <Group className={styles.segmentLabel} gap={6} wrap="nowrap" justify="center">
                     <ListIcon size={15} />
                     <span>Listă</span>
                   </Group>
@@ -152,40 +217,44 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
 
       <div className={styles.viewArea}>
         {mode === "list" ? (
-          <AdminAppointmentsList appointments={periodAppointments} onSelect={setSelected} />
-        ) : period === "month" ? (
-          <div className={styles.monthScroll}>
-            <AdminMonthGrid currentDate={currentDate} appointments={appointments} onSelect={setSelected} />
-          </div>
-        ) : useDaySplit ? (
+          <AdminAppointmentsList appointments={periodAppointments} onSelect={(appointment) => setSelectedId(appointment.id)} />
+        ) : useCalendarSplit ? (
           <div className={styles.daySplitLayout}>
             <div className={styles.daySplitCalendar}>
               <AdminCalendarGrid
+                appointments={filteredAppointments}
                 currentDate={currentDate}
-                view="day"
-                appointments={appointments}
-                onSelect={setSelected}
-                selectedAppointmentId={selected?.id}
+                occupiedAppointments={appointments}
+                onSelect={(appointment) => setSelectedId(appointment.id)}
+                scheduleSlots={scheduleSlots}
+                selectedAppointmentId={selectedId}
+                view={period}
               />
             </div>
             <div className={styles.daySplitDetails}>
-              <AppointmentDetailsPanel appointment={selected} onClose={() => setSelected(null)} />
+              <AppointmentDetailsPanel appointment={selected} onClose={() => setSelectedId(null)} />
             </div>
+          </div>
+        ) : period === "month" ? (
+          <div className={styles.monthScroll}>
+            <AdminMonthGrid currentDate={currentDate} appointments={filteredAppointments} onSelect={(appointment) => setSelectedId(appointment.id)} />
           </div>
         ) : (
           <div className={styles.calendarScroll}>
             <AdminCalendarGrid
+              appointments={filteredAppointments}
               currentDate={currentDate}
+              occupiedAppointments={appointments}
+              onSelect={(appointment) => setSelectedId(appointment.id)}
+              scheduleSlots={scheduleSlots}
+              selectedAppointmentId={selectedId}
               view={period}
-              appointments={appointments}
-              onSelect={setSelected}
-              selectedAppointmentId={selected?.id}
             />
           </div>
         )}
       </div>
 
-      {!useDaySplit ? <AppointmentDetailsModal appointment={selected} onClose={() => setSelected(null)} /> : null}
+      {!useCalendarSplit ? <AppointmentDetailsModal appointment={selected} onClose={() => setSelectedId(null)} /> : null}
     </div>
   );
 }

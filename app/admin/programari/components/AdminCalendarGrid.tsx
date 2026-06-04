@@ -1,5 +1,9 @@
+import { useMemo, useRef, useState, useTransition, type DragEvent } from "react";
+import { useRouter } from "next/navigation";
 import { Box, Text } from "@mantine/core";
-import { dateValue, getDatesOfWeek, labelDateShort, calculateEventPosition } from "../lib/admin-calendar-utils";
+import { rescheduleAppointment } from "@/app/admin/actions";
+import { dateValue, getDatesOfWeek, labelDateShort, calculateEventPosition, toMinutes } from "../lib/admin-calendar-utils";
+import type { AppointmentScheduleSlot } from "../AppointmentsPanel";
 import type { Appointment } from "./AdminAppointmentsList";
 import styles from "../programari.module.css";
 
@@ -7,21 +11,121 @@ interface AdminCalendarGridProps {
   currentDate: Date; // represents the day or week we are looking at
   view: "day" | "week";
   appointments: Appointment[];
+  occupiedAppointments: Appointment[];
   onSelect?: (appointment: Appointment) => void;
+  scheduleSlots: AppointmentScheduleSlot[];
   selectedAppointmentId?: string | null;
 }
 
 const START_HOUR = 8;
 const END_HOUR = 20;
 const PIXELS_PER_HOUR = 60; // 60px height per hour => 1 minute = 1px
+const DROP_SLOT_DURATION_MIN = 30;
 
-export function AdminCalendarGrid({ currentDate, view, appointments, onSelect, selectedAppointmentId }: AdminCalendarGridProps) {
+function toTime(value: number) {
+  return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+}
+
+function buildSlots(start: string, end: string, durationMin: number) {
+  const slots = [];
+  const close = toMinutes(end);
+  for (let time = toMinutes(start); time + durationMin <= close; time += durationMin) {
+    slots.push(toTime(time));
+  }
+  return slots;
+}
+
+export function AdminCalendarGrid({
+  appointments,
+  currentDate,
+  occupiedAppointments,
+  onSelect,
+  scheduleSlots,
+  selectedAppointmentId,
+  view,
+}: AdminCalendarGridProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [dragTarget, setDragTarget] = useState<null | { date: string; isOutsideSchedule: boolean; time: string }>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const draggedAppointmentIdRef = useRef<string | null>(null);
+  const suppressNextClickRef = useRef(false);
   const dates = view === "day" ? [currentDate] : getDatesOfWeek(currentDate);
+  const activeScheduleSlots = scheduleSlots.filter((slot) => {
+    const startMinutes = toMinutes(slot.startTime);
+    const endMinutes = toMinutes(slot.endTime);
+    return endMinutes > START_HOUR * 60 && startMinutes < END_HOUR * 60;
+  });
 
   // Group appointments by date string
   const groupedByDate = new Map<string, Appointment[]>();
   for (const apt of appointments) {
     groupedByDate.set(apt.date, [...(groupedByDate.get(apt.date) || []), apt]);
+  }
+  const occupiedSlotValues = new Set(occupiedAppointments.map((apt) => `${apt.date}|${apt.time}`));
+  const selectedAppointment = selectedAppointmentId
+    ? occupiedAppointments.find((apt) => apt.id === selectedAppointmentId)
+    : null;
+  const visibleGridSlots = useMemo(() => {
+    return Array.from({ length: ((END_HOUR - START_HOUR) * 60) / DROP_SLOT_DURATION_MIN }, (_, index) => {
+      const time = START_HOUR * 60 + index * DROP_SLOT_DURATION_MIN;
+      return toTime(time);
+    });
+  }, []);
+
+  function isTimeInsideSchedule(date: Date, time: string) {
+    return activeScheduleSlots
+      .filter((slot) => slot.dayOfWeek === date.getDay())
+      .some((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin).includes(time));
+  }
+
+  function onDragStart(event: DragEvent<HTMLDivElement>, appointment: Appointment) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", appointment.id);
+    draggedAppointmentIdRef.current = appointment.id;
+    suppressNextClickRef.current = true;
+    setIsDragging(true);
+    onSelect?.(appointment);
+  }
+
+  function onDragEnd() {
+    draggedAppointmentIdRef.current = null;
+    setIsDragging(false);
+    setDragTarget(null);
+    window.setTimeout(() => {
+      suppressNextClickRef.current = false;
+    }, 0);
+  }
+
+  function onDrop(event: DragEvent<HTMLDivElement>, date: string, time: string, isOutsideSchedule: boolean) {
+    event.preventDefault();
+    setDragTarget(null);
+    const appointmentId = event.dataTransfer.getData("text/plain");
+
+    if (!appointmentId || isPending) {
+      return;
+    }
+
+    const appointment = occupiedAppointments.find((apt) => apt.id === appointmentId);
+    if (!appointment || (appointment.date === date && appointment.time === time)) {
+      return;
+    }
+
+    if (isOutsideSchedule) {
+      const confirmed = window.confirm(`Slotul ${date} la ${time} este in afara programului clinic. Confirmi mutarea ca exceptie aprobata de medic?`);
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    startTransition(async () => {
+      const result = await rescheduleAppointment(appointmentId, date, time, isOutsideSchedule);
+      if (result.status === "error") {
+        window.alert(result.message);
+        return;
+      }
+      router.refresh();
+    });
   }
 
   return (
@@ -94,9 +198,76 @@ export function AdminCalendarGrid({ currentDate, view, appointments, onSelect, s
           {dates.map((date) => {
             const val = dateValue(date);
             const dayAppointments = groupedByDate.get(val) || [];
+            const dayDropSlots = visibleGridSlots.map((time) => ({
+              durationMin: DROP_SLOT_DURATION_MIN,
+              id: `${val}-${time}`,
+              isOutsideSchedule: !isTimeInsideSchedule(date, time),
+              time,
+            }));
+            const dayScheduleRanges = activeScheduleSlots
+              .filter((slot) => slot.dayOfWeek === date.getDay())
+              .map((slot) => {
+                const start = Math.max(toMinutes(slot.startTime), START_HOUR * 60);
+                const end = Math.min(toMinutes(slot.endTime), END_HOUR * 60);
+                return {
+                  id: `${val}-${slot.id}`,
+                  start,
+                  end,
+                };
+              })
+              .filter((range) => range.end > range.start);
 
             return (
               <div key={val} style={{ flex: 1, position: "relative", borderLeft: "1px solid #f1f3f5" }}>
+                {dayScheduleRanges.map((range) => {
+                  const top = ((range.start - START_HOUR * 60) / 60) * PIXELS_PER_HOUR;
+                  const height = ((range.end - range.start) / 60) * PIXELS_PER_HOUR;
+                  const isActiveDay = isDragging && dragTarget?.date === val;
+
+                  return (
+                    <div
+                      className={`${styles.scheduleDropRange} ${isActiveDay ? styles.scheduleDropRangeActive : ""}`}
+                      key={range.id}
+                      style={{
+                        height: `${height}px`,
+                        top: `${top}px`,
+                      }}
+                    />
+                  );
+                })}
+                {dayDropSlots.map((slot) => {
+                  const isCurrentSelectedSlot = selectedAppointment?.date === val && selectedAppointment.time === slot.time;
+                  const isOccupied = occupiedSlotValues.has(`${val}|${slot.time}`) && !isCurrentSelectedSlot;
+                  if (isOccupied) {
+                    return null;
+                  }
+
+                  const { top, height } = calculateEventPosition(slot.time, slot.durationMin, START_HOUR, PIXELS_PER_HOUR);
+                  const isActiveTarget = dragTarget?.date === val && dragTarget.time === slot.time;
+
+                  return (
+                    <div
+                      aria-label={`Muta programarea la ${val} ${slot.time}`}
+                      className={[
+                        styles.availableDropSlot,
+                        slot.isOutsideSchedule ? styles.exceptionDropSlot : "",
+                        isActiveTarget ? styles.activeDropSlot : "",
+                      ].filter(Boolean).join(" ")}
+                      key={slot.id}
+                      onDragEnter={() => setDragTarget({ date: val, isOutsideSchedule: slot.isOutsideSchedule, time: slot.time })}
+                      onDragLeave={() => setDragTarget((current) => (current?.date === val && current.time === slot.time ? null : current))}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                      }}
+                      onDrop={(event) => onDrop(event, val, slot.time, slot.isOutsideSchedule)}
+                      style={{
+                        height: `${height}px`,
+                        top: `${top}px`,
+                      }}
+                    />
+                  );
+                })}
                 {dayAppointments.map((apt) => {
                   const { top, height } = calculateEventPosition(apt.time, apt.durationMin, START_HOUR, PIXELS_PER_HOUR);
                   const isSelected = apt.id === selectedAppointmentId;
@@ -110,7 +281,15 @@ export function AdminCalendarGrid({ currentDate, view, appointments, onSelect, s
                     <Box
                       key={apt.id}
                       className={`${styles.calendarEvent} ${isSelected ? styles.calendarEventSelected : ""}`}
-                      onClick={() => onSelect?.(apt)}
+                      draggable={!isPending}
+                      onClick={() => {
+                        if (suppressNextClickRef.current || draggedAppointmentIdRef.current === apt.id) {
+                          return;
+                        }
+                        onSelect?.(apt);
+                      }}
+                      onDragEnd={onDragEnd}
+                      onDragStart={(event) => onDragStart(event, apt)}
                       data-status={apt.status}
                       style={{
                         position: "absolute",

@@ -223,6 +223,36 @@ function isTimeValue(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function toMinutes(value: string) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function toTime(value: number) {
+  return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+}
+
+function isDateValue(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function dateFromValue(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function weekdayFromDateValue(value: string) {
+  return new Date(`${value}T12:00:00.000Z`).getUTCDay();
+}
+
+function buildSlots(start: string, end: string, durationMin: number) {
+  const slots = [];
+  const close = toMinutes(end);
+  for (let time = toMinutes(start); time + durationMin <= close; time += durationMin) {
+    slots.push(toTime(time));
+  }
+  return slots;
+}
+
 function readScheduleSlotForm(formData: FormData) {
   const dayOfWeek = parseDayOfWeek(formData.get("dayOfWeek"));
   const startTime = String(formData.get("startTime") ?? "").trim();
@@ -365,4 +395,72 @@ export async function deleteAppointment(appointmentId: string) {
   revalidatePath("/programari");
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
+}
+
+export async function rescheduleAppointment(appointmentId: string, date: string, time: string, allowOutsideSchedule = false) {
+  await requireFeature("appointments.manage");
+
+  const id = String(appointmentId ?? "").trim();
+  const nextDate = String(date ?? "").trim();
+  const nextTime = String(time ?? "").trim();
+
+  if (!id || !isDateValue(nextDate) || !isTimeValue(nextTime)) {
+    return { message: "Data sau ora nu este valida.", status: "error" as const };
+  }
+
+  const appointment = await prisma.$queryRaw<Array<{ durationMin: number; id: string; status: string }>>`
+    SELECT "durationMin", "id", "status"
+    FROM "Appointment"
+    WHERE "id" = ${id}
+    LIMIT 1
+  `;
+
+  if (!appointment[0] || appointment[0].status === "CANCELLED") {
+    return { message: "Programarea nu mai poate fi mutata.", status: "error" as const };
+  }
+
+  const dayOfWeek = weekdayFromDateValue(nextDate);
+  const scheduleSlots = await prisma.$queryRaw<Array<{ startTime: string; endTime: string; durationMin: number }>>`
+    SELECT "startTime", "endTime", "durationMin"
+    FROM "ClinicScheduleSlot"
+    WHERE "isPaused" = false AND "dayOfWeek" = ${dayOfWeek}
+    ORDER BY "sortOrder" ASC, "startTime" ASC
+  `;
+  const matchingScheduleSlot = scheduleSlots.find((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin).includes(nextTime));
+
+  if (!matchingScheduleSlot && !allowOutsideSchedule) {
+    return { message: "Slotul ales nu este disponibil in program.", status: "error" as const };
+  }
+
+  const appointmentDate = dateFromValue(nextDate);
+  const occupied = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "Appointment"
+    WHERE "date" = ${appointmentDate}
+      AND "time" = ${nextTime}
+      AND "status" <> 'CANCELLED'
+      AND "id" <> ${id}
+    LIMIT 1
+  `;
+
+  if (occupied[0]) {
+    return { message: "Slotul ales este deja ocupat.", status: "error" as const };
+  }
+
+  await prisma.$executeRaw`
+    UPDATE "Appointment"
+    SET
+      "date" = ${appointmentDate},
+      "time" = ${nextTime},
+      "durationMin" = ${matchingScheduleSlot?.durationMin ?? appointment[0].durationMin},
+      "updatedAt" = NOW()
+    WHERE "id" = ${id}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/programari");
+  revalidatePath("/admin");
+  revalidatePath("/admin/programari");
+
+  return { message: "Programarea a fost mutata.", status: "success" as const };
 }

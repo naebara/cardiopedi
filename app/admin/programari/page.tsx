@@ -1,14 +1,27 @@
 import { requireFeature } from "@/lib/admin-features";
 import { getAdminAppointments } from "@/lib/appointments";
+import { getPublicScheduleSlots } from "@/lib/schedule";
 import { AppointmentsPanel } from "./AppointmentsPanel";
 
 export default async function AdminAppointmentsPage() {
   await requireFeature("appointments.view");
-  const appointments = await getAdminAppointments();
+  const [appointments, scheduleSlots] = await Promise.all([
+    getAdminAppointments(),
+    getPublicScheduleSlots(),
+  ]);
 
   return (
     <>
-      <AppointmentsPanel appointments={appointments} />
+      <AppointmentsPanel
+        appointments={appointments}
+        scheduleSlots={scheduleSlots.map((slot) => ({
+          dayOfWeek: slot.dayOfWeek,
+          durationMin: slot.durationMin,
+          endTime: slot.endTime,
+          id: slot.id,
+          startTime: slot.startTime,
+        }))}
+      />
     </>
   );
 }

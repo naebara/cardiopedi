@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { ActionIcon, Button, Group, SegmentedControl } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { CalendarDays, ChevronLeft, ChevronRight, List as ListIcon } from "lucide-react";
 import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
 import { AdminMonthGrid } from "./components/AdminMonthGrid";
 import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
-import { AppointmentDetailsModal } from "./components/AppointmentDetailsModal";
+import { AppointmentDetailsModal, AppointmentDetailsPanel } from "./components/AppointmentDetailsModal";
 import { dateValue, getDatesOfWeek, monthLabel } from "./lib/admin-calendar-utils";
 import styles from "./programari.module.css";
 
@@ -18,6 +19,8 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
   const [period, setPeriod] = useState<Period>("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selected, setSelected] = useState<Appointment | null>(null);
+  const isDesktop = useMediaQuery("(min-width: 1024px)", false);
+  const useDaySplit = mode === "calendar" && period === "day" && isDesktop;
 
   const goNext = () => {
     setCurrentDate((prev) => {
@@ -154,14 +157,35 @@ export function AppointmentsPanel({ appointments }: { appointments: Appointment[
           <div className={styles.monthScroll}>
             <AdminMonthGrid currentDate={currentDate} appointments={appointments} onSelect={setSelected} />
           </div>
+        ) : useDaySplit ? (
+          <div className={styles.daySplitLayout}>
+            <div className={styles.daySplitCalendar}>
+              <AdminCalendarGrid
+                currentDate={currentDate}
+                view="day"
+                appointments={appointments}
+                onSelect={setSelected}
+                selectedAppointmentId={selected?.id}
+              />
+            </div>
+            <div className={styles.daySplitDetails}>
+              <AppointmentDetailsPanel appointment={selected} onClose={() => setSelected(null)} />
+            </div>
+          </div>
         ) : (
           <div className={styles.calendarScroll}>
-            <AdminCalendarGrid currentDate={currentDate} view={period} appointments={appointments} onSelect={setSelected} />
+            <AdminCalendarGrid
+              currentDate={currentDate}
+              view={period}
+              appointments={appointments}
+              onSelect={setSelected}
+              selectedAppointmentId={selected?.id}
+            />
           </div>
         )}
       </div>
 
-      <AppointmentDetailsModal appointment={selected} onClose={() => setSelected(null)} />
+      {!useDaySplit ? <AppointmentDetailsModal appointment={selected} onClose={() => setSelected(null)} /> : null}
     </div>
   );
 }

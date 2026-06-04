@@ -1,19 +1,21 @@
 import { Box, Text } from "@mantine/core";
 import { dateValue, getDatesOfWeek, labelDateShort, calculateEventPosition } from "../lib/admin-calendar-utils";
 import type { Appointment } from "./AdminAppointmentsList";
+import styles from "../programari.module.css";
 
 interface AdminCalendarGridProps {
   currentDate: Date; // represents the day or week we are looking at
   view: "day" | "week";
   appointments: Appointment[];
   onSelect?: (appointment: Appointment) => void;
+  selectedAppointmentId?: string | null;
 }
 
 const START_HOUR = 8;
 const END_HOUR = 20;
 const PIXELS_PER_HOUR = 60; // 60px height per hour => 1 minute = 1px
 
-export function AdminCalendarGrid({ currentDate, view, appointments, onSelect }: AdminCalendarGridProps) {
+export function AdminCalendarGrid({ currentDate, view, appointments, onSelect, selectedAppointmentId }: AdminCalendarGridProps) {
   const dates = view === "day" ? [currentDate] : getDatesOfWeek(currentDate);
 
   // Group appointments by date string
@@ -97,6 +99,7 @@ export function AdminCalendarGrid({ currentDate, view, appointments, onSelect }:
               <div key={val} style={{ flex: 1, position: "relative", borderLeft: "1px solid #f1f3f5" }}>
                 {dayAppointments.map((apt) => {
                   const { top, height } = calculateEventPosition(apt.time, apt.durationMin, START_HOUR, PIXELS_PER_HOUR);
+                  const isSelected = apt.id === selectedAppointmentId;
 
                   let color = "blue";
                   if (apt.status === "Noua") color = "yellow";
@@ -106,7 +109,9 @@ export function AdminCalendarGrid({ currentDate, view, appointments, onSelect }:
                   return (
                     <Box
                       key={apt.id}
+                      className={`${styles.calendarEvent} ${isSelected ? styles.calendarEventSelected : ""}`}
                       onClick={() => onSelect?.(apt)}
+                      data-status={apt.status}
                       style={{
                         position: "absolute",
                         top: `${top}px`,
@@ -115,12 +120,6 @@ export function AdminCalendarGrid({ currentDate, view, appointments, onSelect }:
                         height: `${height}px`,
                         backgroundColor: `var(--mantine-color-${color}-1)`,
                         borderLeft: `4px solid var(--mantine-color-${color}-6)`,
-                        borderRadius: "4px",
-                        padding: "2px 6px",
-                        cursor: "pointer",
-                        overflow: "hidden",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                        transition: "filter 0.12s ease",
                       }}
                     >
                       <Text size="xs" fw={700} c={`${color}.9`} lh={1.2}>{apt.time}</Text>

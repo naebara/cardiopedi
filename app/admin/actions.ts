@@ -356,7 +356,8 @@ export async function deleteAppointment(appointmentId: string) {
   }
 
   await prisma.$executeRaw`
-    DELETE FROM "Appointment"
+    UPDATE "Appointment"
+    SET "status" = 'CANCELLED', "updatedAt" = NOW()
     WHERE "id" = ${id}
   `;
 

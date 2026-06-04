@@ -131,6 +131,128 @@
   min-width: 0;
 }
 
+.calendarEvent {
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+  padding: 3px 7px;
+  transition:
+    box-shadow 0.14s ease,
+    filter 0.14s ease,
+    outline-color 0.14s ease,
+    transform 0.14s ease;
+  z-index: 1;
+}
+
+.calendarEvent:hover {
+  filter: saturate(1.08);
+  transform: translateY(-1px);
+}
+
+.calendarEventSelected {
+  box-shadow: 0 10px 24px rgba(20, 48, 71, 0.24), 0 0 0 3px #ffffff;
+  outline: 3px solid #1f84ba;
+  outline-offset: 2px;
+  transform: translateY(-1px);
+  z-index: 4;
+}
+
+.daySplitLayout {
+  display: grid;
+  flex: 1;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr);
+  min-height: 0;
+  min-width: 0;
+}
+
+.daySplitCalendar,
+.daySplitDetails {
+  min-height: 0;
+  min-width: 0;
+}
+
+.daySplitCalendar {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.daySplitDetails {
+  background: #ffffff;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.detailsPanel {
+  color: #143047;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.detailsPanelHeader {
+  align-items: flex-start;
+  border-bottom: 1px solid #e2eef0;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 18px 18px 14px;
+}
+
+.detailsPanelTitle {
+  color: #143047;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.detailsPanelMeta {
+  align-items: center;
+  border-bottom: 1px solid #eef4f5;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 14px 18px;
+}
+
+.detailsPanelTime {
+  color: #1f84ba;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.detailsPanelBody {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px 10px;
+}
+
+.detailsPanelRow {
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.detailsPanelRowText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.detailsPanelActions {
+  border-top: 1px solid #eef4f5;
+  margin-top: auto;
+  padding: 14px 18px 18px;
+}
+
+.detailsPanelActions button {
+  min-height: 40px;
+}
+
+.detailsPanelEmpty {
+  padding: 22px;
+}
+
 .monthScroll {
   flex: 1;
   min-height: 0;

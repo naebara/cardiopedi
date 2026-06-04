@@ -22,6 +22,7 @@ export type OccupiedAppointmentSlot = {
 
 export type AdminPatient = {
   childName: string;
+  patientId: string;
   parentNames: string[];
   phones: string[];
 };
@@ -49,6 +50,10 @@ type AppointmentRow = {
   notes: string | null;
   status: "NEW" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
 };
+
+function normalizedPatientName(value: string) {
+  return value.trim().toLocaleLowerCase("ro-RO");
+}
 
 const statusLabels = {
   CANCELLED: "Cancelata",
@@ -114,11 +119,13 @@ export async function getOccupiedAppointmentSlots() {
 export async function getAdminPatients() {
   const rows = await prisma.$queryRaw<Array<{
     childName: string;
+    patientId: string;
     parentNames: string[];
     phones: string[];
   }>>`
     SELECT
       (ARRAY_AGG("childName" ORDER BY "date" DESC, "time" DESC))[1] AS "childName",
+      (ARRAY_AGG("id" ORDER BY "date" DESC, "time" DESC))[1] AS "patientId",
       ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("parentName", '')), NULL) AS "parentNames",
       ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("phone", '')), NULL) AS "phones"
     FROM "Appointment"
@@ -129,12 +136,28 @@ export async function getAdminPatients() {
 
   return rows.map((row) => ({
     childName: row.childName,
+    patientId: row.patientId,
     parentNames: row.parentNames,
     phones: row.phones,
   })) satisfies AdminPatient[];
 }
 
-export async function getAdminPatientDetails(childName: string): Promise<AdminPatientDetails | null> {
+export async function getAdminPatientDetails(patientId: string): Promise<AdminPatientDetails | null> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(patientId)) {
+    return null;
+  }
+
+  const patientAnchor = await prisma.$queryRaw<Array<{ childName: string }>>`
+    SELECT "childName"
+    FROM "Appointment"
+    WHERE "id" = ${patientId}
+    LIMIT 1
+  `;
+
+  if (!patientAnchor[0]) {
+    return null;
+  }
+
   const rows = await prisma.$queryRaw<Array<AppointmentRow & {
     email: string | null;
     phone: string;
@@ -153,7 +176,7 @@ export async function getAdminPatientDetails(childName: string): Promise<AdminPa
       "notes",
       "status"
     FROM "Appointment"
-    WHERE LOWER("childName") = LOWER(${childName})
+    WHERE LOWER("childName") = LOWER(${patientAnchor[0].childName})
     ORDER BY "date" DESC, "time" DESC
   `;
 
@@ -161,16 +184,17 @@ export async function getAdminPatientDetails(childName: string): Promise<AdminPa
     return null;
   }
 
-  const parentNames = Array.from(new Set(rows.map((row) => row.parentName).filter(Boolean)));
-  const phones = Array.from(new Set(rows.map((row) => row.phone).filter(Boolean)));
-  const emails = Array.from(new Set(rows.map((row) => row.email).filter((email): email is string => Boolean(email))));
+  const patientRows = rows.filter((row) => normalizedPatientName(row.childName) === normalizedPatientName(patientAnchor[0].childName));
+  const parentNames = Array.from(new Set(patientRows.map((row) => row.parentName).filter(Boolean)));
+  const phones = Array.from(new Set(patientRows.map((row) => row.phone).filter(Boolean)));
+  const emails = Array.from(new Set(patientRows.map((row) => row.email).filter((email): email is string => Boolean(email))));
 
   return {
-    childName: rows[0].childName,
+    childName: patientRows[0].childName,
     parentNames,
     phones,
     emails,
-    appointments: rows.map((row) => ({
+    appointments: patientRows.map((row) => ({
       ...row,
       date: dateKey(row.date),
       day: dayLabel(row.date),

@@ -9,11 +9,11 @@ import styles from "../../admin.module.css";
 export default async function AdminPatientDetailsPage({
   params,
 }: {
-  params: Promise<{ childName: string }>;
+  params: Promise<{ patientId: string }>;
 }) {
   await requireFeature("patients.view");
-  const { childName } = await params;
-  const patient = await getAdminPatientDetails(decodeURIComponent(childName));
+  const { patientId } = await params;
+  const patient = await getAdminPatientDetails(patientId);
 
   if (!patient) {
     notFound();

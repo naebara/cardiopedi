@@ -27,8 +27,8 @@ export function PatientsTable({ patients }: { patients: AdminPatient[] }) {
     return patients.filter((patient) => matchesSearch(patient, search));
   }, [patients, search]);
 
-  function openPatient(childName: string) {
-    router.push(`/admin/pacienti/${encodeURIComponent(childName)}`);
+  function openPatient(patientId: string) {
+    router.push(`/admin/pacienti/${patientId}`);
   }
 
   return (
@@ -58,11 +58,11 @@ export function PatientsTable({ patients }: { patients: AdminPatient[] }) {
             <tr
               className={styles.clickableRow}
               key={patient.childName.toLocaleLowerCase("ro-RO")}
-              onClick={() => openPatient(patient.childName)}
+              onClick={() => openPatient(patient.patientId)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  openPatient(patient.childName);
+                  openPatient(patient.patientId);
                 }
               }}
               role="link"

@@ -5,6 +5,8 @@ import { getPublicScheduleSlots } from "@/lib/schedule";
 import { clinic } from "../site-data";
 import styles from "../public-site.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function ContactPage() {
   const schedule = await getPublicScheduleSlots();
 

@@ -7,6 +7,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
 FROM deps AS builder
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends openssl \
+    && rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN npm run db:generate && npm run build
 

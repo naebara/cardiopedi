@@ -5,6 +5,8 @@ import { getPublicScheduleSlots } from "@/lib/schedule";
 import { getPublicServices } from "@/lib/services";
 import styles from "../public-site.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function AppointmentsPage() {
   const [services, schedule, occupiedSlots] = await Promise.all([
     getPublicServices(),

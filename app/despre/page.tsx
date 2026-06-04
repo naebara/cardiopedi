@@ -3,6 +3,8 @@ import { AboutSection, CarePrinciples } from "../components/Sections";
 import { getPublicScheduleSlots } from "@/lib/schedule";
 import styles from "../public-site.module.css";
 
+export const dynamic = "force-dynamic";
+
 export default async function AboutPage() {
   const schedule = await getPublicScheduleSlots();
 

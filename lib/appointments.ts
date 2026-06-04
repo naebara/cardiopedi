@@ -69,6 +69,7 @@ export async function getAdminAppointments() {
       "notes",
       "status"
     FROM "Appointment"
+    WHERE "status" <> 'CANCELLED'
     ORDER BY "date" ASC, "time" ASC
   `;
 

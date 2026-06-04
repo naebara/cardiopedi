@@ -20,6 +20,22 @@ export type OccupiedAppointmentSlot = {
   time: string;
 };
 
+export type AdminPatient = {
+  childName: string;
+  parentNames: string[];
+  phones: string[];
+};
+
+export type AdminPatientAppointment = AdminAppointment;
+
+export type AdminPatientDetails = {
+  childName: string;
+  parentNames: string[];
+  phones: string[];
+  emails: string[];
+  appointments: AdminPatientAppointment[];
+};
+
 type AppointmentRow = {
   id: string;
   date: Date;
@@ -93,4 +109,72 @@ export async function getOccupiedAppointmentSlots() {
     date: dateKey(row.date),
     time: row.time,
   }));
+}
+
+export async function getAdminPatients() {
+  const rows = await prisma.$queryRaw<Array<{
+    childName: string;
+    parentNames: string[];
+    phones: string[];
+  }>>`
+    SELECT
+      (ARRAY_AGG("childName" ORDER BY "date" DESC, "time" DESC))[1] AS "childName",
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("parentName", '')), NULL) AS "parentNames",
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("phone", '')), NULL) AS "phones"
+    FROM "Appointment"
+    WHERE "status" IN ('NEW', 'CONFIRMED')
+    GROUP BY LOWER("childName")
+    ORDER BY LOWER("childName") ASC
+  `;
+
+  return rows.map((row) => ({
+    childName: row.childName,
+    parentNames: row.parentNames,
+    phones: row.phones,
+  })) satisfies AdminPatient[];
+}
+
+export async function getAdminPatientDetails(childName: string): Promise<AdminPatientDetails | null> {
+  const rows = await prisma.$queryRaw<Array<AppointmentRow & {
+    email: string | null;
+    phone: string;
+    parentName: string;
+  }>>`
+    SELECT
+      "id",
+      "date",
+      "time",
+      "durationMin",
+      "childName",
+      "parentName",
+      "service",
+      "phone",
+      "email",
+      "notes",
+      "status"
+    FROM "Appointment"
+    WHERE LOWER("childName") = LOWER(${childName})
+    ORDER BY "date" DESC, "time" DESC
+  `;
+
+  if (!rows[0]) {
+    return null;
+  }
+
+  const parentNames = Array.from(new Set(rows.map((row) => row.parentName).filter(Boolean)));
+  const phones = Array.from(new Set(rows.map((row) => row.phone).filter(Boolean)));
+  const emails = Array.from(new Set(rows.map((row) => row.email).filter((email): email is string => Boolean(email))));
+
+  return {
+    childName: rows[0].childName,
+    parentNames,
+    phones,
+    emails,
+    appointments: rows.map((row) => ({
+      ...row,
+      date: dateKey(row.date),
+      day: dayLabel(row.date),
+      status: statusLabels[row.status],
+    })),
+  };
 }

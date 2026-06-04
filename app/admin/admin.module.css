@@ -252,6 +252,149 @@
   text-transform: uppercase;
 }
 
+.tableToolbar {
+  margin-bottom: 16px;
+}
+
+.searchField {
+  align-items: center;
+  border: 1px solid #cfdbe3;
+  border-radius: 8px;
+  color: #6f7f8a;
+  display: flex;
+  gap: 10px;
+  max-width: 460px;
+  padding: 0 12px;
+}
+
+.searchField input {
+  border: 0;
+  color: #143047;
+  flex: 1;
+  font: inherit;
+  min-height: 42px;
+  min-width: 0;
+  outline: 0;
+}
+
+.clickableRow {
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.clickableRow:hover,
+.clickableRow:focus-visible {
+  background: #f3faf8;
+}
+
+.backLink {
+  align-items: center;
+  color: #1f7660;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 900;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.patientDetailGrid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.patientDetailGrid .card {
+  padding: 18px 22px;
+}
+
+.patientDetailGrid .card h2 {
+  margin-bottom: 14px;
+}
+
+.detailList {
+  display: grid;
+  gap: 0;
+  grid-template-columns: minmax(180px, 0.9fr) minmax(220px, 1fr) minmax(260px, 1.3fr) minmax(120px, 0.5fr);
+}
+
+.detailList div {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-left: 1px solid #e2eef0;
+  border-radius: 0;
+  display: grid;
+  gap: 3px 10px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding: 8px 18px;
+}
+
+.detailList div:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.detailList svg {
+  color: #2f9f7f;
+  grid-row: span 2;
+}
+
+.detailList span {
+  color: #5e7784;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.detailList strong {
+  color: #143047;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.historyCellIcon {
+  align-items: flex-start;
+  display: inline-flex;
+  gap: 6px;
+  line-height: 1.35;
+}
+
+.historyCellIcon svg {
+  color: #5e7784;
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.appointmentStatusBadge {
+  align-items: center;
+  border-radius: 8px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 9px;
+  white-space: nowrap;
+}
+
+.appointmentStatusNew {
+  background: #fff7db;
+  color: #7a5b00;
+}
+
+.appointmentStatusConfirmed {
+  background: #e9f8f0;
+  color: #1f7660;
+}
+
+.appointmentStatusCancelled {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.panel .table {
+  font-size: 13px;
+}
+
 .status {
   background: #fff7df;
   color: #6b551e;
@@ -770,6 +913,8 @@
 
   .statsGrid,
   .grid,
+  .patientDetailGrid,
+  .detailList,
   .calendarGrid,
   .featureGrid,
   .formRow,

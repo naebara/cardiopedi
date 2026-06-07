@@ -2,7 +2,7 @@
 
 import { MouseEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Trash2, X } from "lucide-react";
+import { Trash2, X } from "lucide-react";
 import { softDeletePatient } from "@/app/admin/actions";
 import styles from "../admin.module.css";
 
@@ -76,8 +76,6 @@ export function DeletePatientButton({ compact = false, patientId, patientName }:
                 <X size={18} />
               </button>
             </div>
-
-
 
             {message ? <p className={styles.errorText}>{message}</p> : null}
 

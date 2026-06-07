@@ -4,7 +4,7 @@ type MailMessage = {
   html?: string;
   subject: string;
   text: string;
-  to: string;
+  to: string | string[];
 };
 
 function smtpPort() {
@@ -20,13 +20,15 @@ export function isMailConfigured() {
 }
 
 async function sendWithResend(message: MailMessage) {
+  const recipients = Array.isArray(message.to) ? message.to : [message.to];
+
   const response = await fetch("https://api.resend.com/emails", {
     body: JSON.stringify({
       from: process.env.MAIL_FROM,
       html: message.html,
       subject: message.subject,
       text: message.text,
-      to: [message.to],
+      to: recipients,
     }),
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,

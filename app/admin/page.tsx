@@ -24,5 +24,5 @@ export default async function AdminPage() {
     redirect("/admin/users");
   }
 
-  redirect("/admin/no-access");
+  redirect("/admin/setari-cont");
 }

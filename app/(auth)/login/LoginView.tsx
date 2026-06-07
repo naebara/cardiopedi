@@ -79,6 +79,11 @@ export default function LoginView() {
                         )}
                     </form>
 
+                    <p className={classes.accountNote}>
+                        <Link className={classes.link} href="/forgot-password">
+                            Mi-am uitat parola
+                        </Link>
+                    </p>
                 </Paper>
 
                 <div className={classes.coverPanel}>

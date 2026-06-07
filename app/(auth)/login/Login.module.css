@@ -145,6 +145,17 @@
   padding: 12px;
 }
 
+.successText {
+  background: #e9f8f0;
+  border: 1px solid #cde9d8;
+  border-radius: 8px;
+  color: #1f7660;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 14px;
+  padding: 12px;
+}
+
 .accountNote {
   color: #58707c;
   font-size: 14px;

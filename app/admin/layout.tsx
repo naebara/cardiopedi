@@ -1,4 +1,4 @@
-import { CalendarDays, HeartPulse, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
+import { CalendarDays, HeartPulse, KeyRound, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { AdminNavItem } from "./components/AdminNavItem";
 import { AdminContentWrapper } from "./components/AdminContentWrapper";
@@ -12,11 +12,12 @@ const navItems = [
   { href: "/admin/setari/program", label: "Program cabinet", icon: Settings, feature: "schedule.manage" as const },
   { href: "/admin/setari/servicii", label: "Servicii & tarife", icon: HeartPulse, feature: "services.manage" as const },
   { href: "/admin/users", label: "Utilizatori", icon: LockKeyhole, feature: "users.manage" as const },
+  { href: "/admin/setari-cont", label: "Setari cont", icon: KeyRound },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentAdminUser();
-  const visibleItems = navItems.filter((item) => canAccess(user, item.feature));
+  const visibleItems = navItems.filter((item) => !item.feature || canAccess(user, item.feature));
 
   return (
     <main className={styles.adminShell}>

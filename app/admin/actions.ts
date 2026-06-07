@@ -3,10 +3,15 @@
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { ADMIN_FEATURES, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
+import { ADMIN_FEATURES, getCurrentAdminUser, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
 import { prisma } from "@/lib/prisma";
 
 export type CreateAdminUserState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
+export type AccountPasswordState = {
   message: string;
   status: "error" | "idle" | "success";
 };
@@ -16,6 +21,66 @@ const createAdminUserSchema = z.object({
   name: z.string().trim().optional(),
   password: z.string().min(6, "Parola trebuie sa aiba cel putin 6 caractere"),
 });
+
+const accountPasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Parola curenta este obligatorie"),
+  newPassword: z.string().min(6, "Parola noua trebuie sa aiba cel putin 6 caractere"),
+  confirmPassword: z.string().min(6, "Confirmarea parolei este obligatorie"),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Parolele nu coincid",
+  path: ["confirmPassword"],
+});
+
+export async function updateOwnPassword(_prevState: AccountPasswordState, formData: FormData): Promise<AccountPasswordState> {
+  const currentUser = await getCurrentAdminUser();
+  const result = accountPasswordSchema.safeParse({
+    confirmPassword: formData.get("confirmPassword"),
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+  });
+
+  if (!result.success) {
+    return {
+      message: result.error.issues[0]?.message ?? "Datele nu sunt valide.",
+      status: "error",
+    };
+  }
+
+  const users = await prisma.$queryRaw<Array<{ id: string; password: string | null }>>`
+    SELECT "id", "password"
+    FROM "User"
+    WHERE "id" = ${currentUser.id}
+    LIMIT 1
+  `;
+  const user = users[0];
+
+  if (!user?.password) {
+    return {
+      message: "Contul nu are parola setata.",
+      status: "error",
+    };
+  }
+
+  const passwordMatches = await bcrypt.compare(result.data.currentPassword, user.password);
+  if (!passwordMatches) {
+    return {
+      message: "Parola curenta este incorecta.",
+      status: "error",
+    };
+  }
+
+  const hashedPassword = await bcrypt.hash(result.data.newPassword, 10);
+  await prisma.$executeRaw`
+    UPDATE "User"
+    SET "password" = ${hashedPassword}, "updatedAt" = NOW()
+    WHERE "id" = ${currentUser.id}
+  `;
+
+  return {
+    message: "Parola a fost actualizata.",
+    status: "success",
+  };
+}
 
 export async function createAdminUser(_prevState: CreateAdminUserState, formData: FormData): Promise<CreateAdminUserState> {
   const currentUser = await requireMasterUser();

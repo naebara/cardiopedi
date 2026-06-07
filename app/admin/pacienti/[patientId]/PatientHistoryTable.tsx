@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal, Text } from "@mantine/core";
-import { CalendarDays, Clock, HeartPulse, Phone, UserRound } from "lucide-react";
+import { Baby, CalendarDays, Clock, HeartPulse, Phone, UserRound } from "lucide-react";
 import type { AdminPatientAppointment } from "@/lib/appointments";
 import styles from "../../admin.module.css";
 
@@ -33,6 +33,7 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
             <th>Data</th>
             <th>Ora</th>
             <th>Serviciu</th>
+            <th>Varsta</th>
             <th>Parinte</th>
             <th>Telefon</th>
             <th>Status</th>
@@ -63,6 +64,9 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
                 <span className={styles.historyCellIcon}><HeartPulse size={14} /> {appointment.service}</span>
               </td>
               <td>
+                <span className={styles.historyCellIcon}><Baby size={14} /> {appointment.childAge || "-"}</span>
+              </td>
+              <td>
                 <span className={styles.historyCellIcon}><UserRound size={14} /> {appointment.parentName}</span>
               </td>
               <td>
@@ -80,10 +84,10 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
         opened={Boolean(selected)}
         radius="lg"
         size="md"
-        title={selected ? `Observatii - ${selected.date} ${selected.time}` : "Observatii"}
+        title={selected ? `Motivul prezentarii - ${selected.date} ${selected.time}` : "Motivul prezentarii"}
       >
         <Text size="sm">
-          {selected?.notes || "Nu exista observatii pentru aceasta programare."}
+          {selected?.notes || "Nu exista un motiv al prezentarii pentru aceasta programare."}
         </Text>
       </Modal>
     </>

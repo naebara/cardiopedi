@@ -94,6 +94,7 @@ export function AppointmentDetailsContent({
           value={`${appointment.time} · ${appointment.durationMin} min`}
         />
         <DetailRow icon={<Baby size={18} />} label="Copil" value={appointment.childName} />
+        <DetailRow icon={<Baby size={18} />} label="Varsta" value={appointment.childAge || "-"} />
         <DetailRow icon={<UserRound size={18} />} label="Parinte" value={appointment.parentName} />
         <DetailRow
           icon={<Phone size={18} />}
@@ -116,7 +117,7 @@ export function AppointmentDetailsContent({
           />
         ) : null}
         {appointment.notes ? (
-          <DetailRow icon={<MessageSquare size={18} />} label="Observatii" value={appointment.notes} />
+          <DetailRow icon={<MessageSquare size={18} />} label="Motivul prezentarii" value={appointment.notes} />
         ) : null}
       </Stack>
 
@@ -265,6 +266,7 @@ export function AppointmentDetailsPanel({
 
           <div className={styles.detailsPanelBody}>
             <PanelDetailRow icon={<Baby size={17} />} label="Copil" value={appointment.childName} />
+            <PanelDetailRow icon={<Baby size={17} />} label="Varsta" value={appointment.childAge || "-"} />
             <PanelDetailRow icon={<UserRound size={17} />} label="Parinte" value={appointment.parentName} />
             <PanelDetailRow
               icon={<Phone size={17} />}
@@ -287,7 +289,7 @@ export function AppointmentDetailsPanel({
               />
             ) : null}
             {appointment.notes ? (
-              <PanelDetailRow icon={<MessageSquare size={17} />} label="Observatii" value={appointment.notes} />
+              <PanelDetailRow icon={<MessageSquare size={17} />} label="Motivul prezentarii" value={appointment.notes} />
             ) : null}
           </div>
 

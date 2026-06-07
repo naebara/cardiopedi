@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarDays, Mail, Phone, UserRound } from "lucide-react";
+import { ArrowLeft, Baby, CalendarDays, Mail, Phone, UserRound } from "lucide-react";
 import { canAccess, requireFeature } from "@/lib/admin-features";
 import { getAdminPatientDetails } from "@/lib/appointments";
 import { DeletePatientButton } from "../DeletePatientButton";
@@ -40,6 +40,11 @@ export default async function AdminPatientDetailsPage({
         <article className={styles.card}>
           <h2>Detalii generale</h2>
           <div className={styles.detailList}>
+            <div>
+              <Baby size={18} />
+              <span>Varsta</span>
+              <strong>{patient.childAges.join(", ") || "-"}</strong>
+            </div>
             <div>
               <UserRound size={18} />
               <span>Parinti / apartinatori</span>

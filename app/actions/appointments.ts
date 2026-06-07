@@ -62,16 +62,21 @@ function escapeHtml(value: string) {
 
 function formatAppointmentDate(value: string) {
   const date = new Date(`${value}T12:00:00.000Z`);
-  return new Intl.DateTimeFormat("ro-RO", {
+  const formatted = new Intl.DateTimeFormat("ro-RO", {
     day: "2-digit",
     month: "long",
     weekday: "long",
     year: "numeric",
   }).format(date);
+
+  return formatted.replaceAll(/\p{L}+/gu, (word) => {
+    return word.charAt(0).toLocaleUpperCase("ro-RO") + word.slice(1);
+  });
 }
 
 function appointmentNotificationText(appointment: {
   childName: string;
+  childAge: string;
   date: string;
   durationMin: number;
   email: string;
@@ -89,15 +94,17 @@ function appointmentNotificationText(appointment: {
     `Serviciu: ${appointment.service}`,
     "",
     `Copil: ${appointment.childName}`,
+    `Varsta: ${appointment.childAge || "-"}`,
     `Parinte: ${appointment.parentName}`,
     `Telefon: ${appointment.phone}`,
     `Email: ${appointment.email || "-"}`,
-    `Observatii: ${appointment.notes || "-"}`,
+    `Motivul prezentarii: ${appointment.notes || "-"}`,
   ].join("\n");
 }
 
 function appointmentNotificationHtml(appointment: {
   childName: string;
+  childAge: string;
   date: string;
   durationMin: number;
   email: string;
@@ -112,10 +119,11 @@ function appointmentNotificationHtml(appointment: {
     ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
     ["Serviciu", appointment.service],
     ["Copil", appointment.childName],
+    ["Varsta", appointment.childAge || "-"],
     ["Parinte", appointment.parentName],
     ["Telefon", appointment.phone],
     ["Email", appointment.email || "-"],
-    ["Observatii", appointment.notes || "-"],
+    ["Motivul prezentarii", appointment.notes || "-"],
   ];
 
   return `
@@ -149,6 +157,7 @@ function appointmentNotificationHtml(appointment: {
 
 async function notifyNewAppointment(appointment: {
   childName: string;
+  childAge: string;
   date: string;
   durationMin: number;
   email: string;
@@ -175,11 +184,12 @@ export async function createAppointment(
   const service = textValue(formData, "service");
   const parentName = textValue(formData, "parentName");
   const childName = textValue(formData, "childName");
+  const childAge = textValue(formData, "childAge");
   const phone = textValue(formData, "phone");
   const email = textValue(formData, "email");
   const notes = textValue(formData, "notes");
 
-  if (!isDateValue(date) || !isTimeValue(time) || !service || !parentName || !childName || !/^\d{10}$/.test(phone)) {
+  if (!isDateValue(date) || !isTimeValue(time) || !service || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone)) {
     return {
       message: "Completeaza corect data, ora, serviciul si datele de contact.",
       status: "error",
@@ -245,6 +255,7 @@ export async function createAppointment(
         "service",
         "parentName",
         "childName",
+        "childAge",
         "phone",
         "email",
         "notes",
@@ -258,6 +269,7 @@ export async function createAppointment(
         ${service},
         ${parentName},
         ${childName},
+        ${childAge},
         ${phone},
         ${email || null},
         ${notes || null},
@@ -278,6 +290,7 @@ export async function createAppointment(
   try {
     await notifyNewAppointment({
       childName,
+      childAge,
       date,
       durationMin: matchingScheduleSlot.durationMin,
       email,

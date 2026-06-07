@@ -8,6 +8,7 @@ export type Appointment = {
   time: string;
   durationMin: number;
   childName: string;
+  childAge: string | null;
   parentName: string;
   service: string;
   phone: string;
@@ -53,7 +54,7 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
               <td>{appointment.time}</td>
               <td>
                 <div className={styles.rowChild}>{appointment.childName}</div>
-                <div className={styles.rowSub}>{appointment.parentName}</div>
+                <div className={styles.rowSub}>{appointment.childAge || "-"} · {appointment.parentName}</div>
               </td>
               <td>{appointment.service}</td>
               <td>{appointment.phone}</td>

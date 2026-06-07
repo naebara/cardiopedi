@@ -31,6 +31,7 @@ function appointmentMatchesSearch(appointment: Appointment, search: string) {
 
   return [
     appointment.childName,
+    appointment.childAge ?? "",
     appointment.parentName,
     appointment.service,
     appointment.phone,

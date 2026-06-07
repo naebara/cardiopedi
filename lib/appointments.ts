@@ -7,6 +7,7 @@ export type AdminAppointment = {
   time: string;
   durationMin: number;
   childName: string;
+  childAge: string | null;
   parentName: string;
   service: string;
   phone: string;
@@ -21,6 +22,7 @@ export type OccupiedAppointmentSlot = {
 };
 
 export type AdminPatient = {
+  childAge: string | null;
   childName: string;
   patientId: string;
   parentNames: string[];
@@ -31,6 +33,7 @@ export type AdminPatientAppointment = AdminAppointment;
 
 export type AdminPatientDetails = {
   childName: string;
+  childAges: string[];
   parentNames: string[];
   phones: string[];
   emails: string[];
@@ -43,6 +46,7 @@ type AppointmentRow = {
   time: string;
   durationMin: number;
   childName: string;
+  childAge: string | null;
   parentName: string;
   service: string;
   phone: string;
@@ -83,6 +87,7 @@ export async function getAdminAppointments() {
       "time",
       "durationMin",
       "childName",
+      "childAge",
       "parentName",
       "service",
       "phone",
@@ -124,12 +129,14 @@ export async function getOccupiedAppointmentSlots() {
 export async function getAdminPatients() {
   const rows = await prisma.$queryRaw<Array<{
     childName: string;
+    childAge: string | null;
     patientId: string;
     parentNames: string[];
     phones: string[];
   }>>`
     SELECT
       (ARRAY_AGG(a."childName" ORDER BY a."date" DESC, a."time" DESC))[1] AS "childName",
+      (ARRAY_AGG(a."childAge" ORDER BY a."date" DESC, a."time" DESC))[1] AS "childAge",
       (ARRAY_AGG(a."id" ORDER BY a."date" DESC, a."time" DESC))[1] AS "patientId",
       ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(a."parentName", '')), NULL) AS "parentNames",
       ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(a."phone", '')), NULL) AS "phones"
@@ -145,6 +152,7 @@ export async function getAdminPatients() {
   `;
 
   return rows.map((row) => ({
+    childAge: row.childAge,
     childName: row.childName,
     patientId: row.patientId,
     parentNames: row.parentNames,
@@ -184,6 +192,7 @@ export async function getAdminPatientDetails(patientId: string): Promise<AdminPa
       "time",
       "durationMin",
       "childName",
+      "childAge",
       "parentName",
       "service",
       "phone",
@@ -205,12 +214,14 @@ export async function getAdminPatientDetails(patientId: string): Promise<AdminPa
   }
 
   const patientRows = rows.filter((row) => normalizedPatientName(row.childName) === normalizedPatientName(patientAnchor[0].childName));
+  const childAges = Array.from(new Set(patientRows.map((row) => row.childAge).filter((age): age is string => Boolean(age))));
   const parentNames = Array.from(new Set(patientRows.map((row) => row.parentName).filter(Boolean)));
   const phones = Array.from(new Set(patientRows.map((row) => row.phone).filter(Boolean)));
   const emails = Array.from(new Set(patientRows.map((row) => row.email).filter((email): email is string => Boolean(email))));
 
   return {
     childName: patientRows[0].childName,
+    childAges,
     parentNames,
     phones,
     emails,

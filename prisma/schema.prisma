@@ -52,6 +52,7 @@ model Appointment {
   service     String
   parentName  String
   childName   String
+  childAge    String?
   phone       String
   email       String?
   notes       String?

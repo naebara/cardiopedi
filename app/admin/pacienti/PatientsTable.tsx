@@ -16,6 +16,7 @@ function matchesSearch(patient: AdminPatient, search: string) {
 
   return [
     patient.childName,
+    patient.childAge ?? "",
     ...patient.parentNames,
     ...patient.phones,
   ].some((value) => value.toLocaleLowerCase("ro-RO").includes(query));
@@ -56,6 +57,7 @@ export function PatientsTable({
         <thead>
           <tr>
             <th>Copil</th>
+            <th>Varsta</th>
             <th>Parinti / apartinatori</th>
             <th>Telefon</th>
             {canManagePatients ? <th>Actiuni</th> : null}
@@ -77,6 +79,7 @@ export function PatientsTable({
               tabIndex={0}
             >
               <td><strong>{patient.childName}</strong></td>
+              <td>{patient.childAge || "-"}</td>
               <td>{patient.parentNames.join(", ") || "-"}</td>
               <td>{patient.phones.join(", ") || "-"}</td>
               {canManagePatients ? (
@@ -90,7 +93,7 @@ export function PatientsTable({
           ))}
           {filteredPatients.length === 0 ? (
             <tr>
-              <td colSpan={canManagePatients ? 4 : 3}>Nu exista pacienti pentru cautarea curenta.</td>
+              <td colSpan={canManagePatients ? 5 : 4}>Nu exista pacienti pentru cautarea curenta.</td>
             </tr>
           ) : null}
         </tbody>

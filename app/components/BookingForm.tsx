@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, UserRound } from "lucide-react";
+import { useFormStatus } from "react-dom";
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, Send, UserRound, X } from "lucide-react";
 import { createAppointment, type AppointmentFormState } from "@/app/actions/appointments";
 import { appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
@@ -68,6 +69,30 @@ const initialState: AppointmentFormState = {
   status: "idle",
 };
 
+function SubmitButton({
+  disabled,
+}: {
+  disabled: boolean;
+}) {
+  const { pending } = useFormStatus();
+
+  return (
+    <button className={styles.primaryButton} disabled={disabled || pending} type="submit">
+      {pending ? (
+        <>
+          <span className={styles.buttonSpinner} aria-hidden="true" />
+          Se trimite cererea...
+        </>
+      ) : (
+        <>
+          <Send size={18} />
+          Trimite cererea de programare
+        </>
+      )}
+    </button>
+  );
+}
+
 export function BookingForm({
   occupiedSlots,
   schedule,
@@ -78,7 +103,9 @@ export function BookingForm({
   services: BookingServiceOption[];
 }) {
   const [formState, formAction] = useActionState(createAppointment, initialState);
+  const formRef = useRef<HTMLFormElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const occupiedSlotValues = useMemo(() => new Set(occupiedSlots.map((slot) => `${slot.date}|${slot.time}`)), [occupiedSlots]);
   const scheduleByWeekday = useMemo(() => {
     return schedule.reduce<Record<number, BookingScheduleOption[]>>((acc, slot) => {
@@ -177,87 +204,105 @@ export function BookingForm({
   const canGoPrev = calendarMonth > firstAvailableMonth;
   const canGoNext = calendarMonth < lastAvailableMonth;
 
+  useEffect(() => {
+    if (formState.status !== "success") {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setIsSuccessModalOpen(true);
+      formRef.current?.reset();
+      setSelectedDate("");
+      setSelectedTime("");
+      setPhone("");
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [formState]);
+
   return (
-    <form
-      className={styles.bookingForm}
-      action={formAction}
-    >
-      <div className={styles.formGrid}>
-        <label>
-          <span><CalendarDays size={18} /> Data</span>
-          <div className={styles.datePickerWrap} ref={datePickerRef}>
-            <input
-              aria-haspopup="dialog"
-              onClick={() => setIsDatePickerOpen(true)}
-              onFocus={() => setIsDatePickerOpen(true)}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setIsDatePickerOpen(false);
-              }}
-              placeholder="Selecteaza data"
-              readOnly
-              required
-              disabled={availableDates.length === 0}
-              type="text"
-              value={selectedDateLabel}
-            />
-            <input name="date" type="hidden" value={selectedDate} />
+    <>
+      <form
+        className={styles.bookingForm}
+        action={formAction}
+        ref={formRef}
+      >
+        <div className={styles.formGrid}>
+          <label>
+            <span><CalendarDays size={18} /> Data</span>
+            <div className={styles.datePickerWrap} ref={datePickerRef}>
+              <input
+                aria-haspopup="dialog"
+                onClick={() => setIsDatePickerOpen(true)}
+                onFocus={() => setIsDatePickerOpen(true)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") setIsDatePickerOpen(false);
+                }}
+                placeholder="Selecteaza data"
+                readOnly
+                required
+                disabled={availableDates.length === 0}
+                type="text"
+                value={selectedDateLabel}
+              />
+              <input name="date" type="hidden" value={selectedDate} />
 
-            {isDatePickerOpen ? (
-              <div className={styles.datePickerPopover} role="dialog" aria-label="Alege data programarii">
-                <div className={styles.datePickerHeader}>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}
-                    disabled={!canGoPrev}
-                    aria-label="Luna precedenta"
-                  >
-                    <ChevronLeft size={18} />
-                  </button>
-                  <strong>{monthLabel(calendarMonth)}</strong>
-                  <button
-                    type="button"
-                    onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}
-                    disabled={!canGoNext}
-                    aria-label="Luna urmatoare"
-                  >
-                    <ChevronRight size={18} />
-                  </button>
+              {isDatePickerOpen ? (
+                <div className={styles.datePickerPopover} role="dialog" aria-label="Alege data programarii">
+                  <div className={styles.datePickerHeader}>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() - 1, 1))}
+                      disabled={!canGoPrev}
+                      aria-label="Luna precedenta"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                    <strong>{monthLabel(calendarMonth)}</strong>
+                    <button
+                      type="button"
+                      onClick={() => setCalendarMonth((date) => new Date(date.getFullYear(), date.getMonth() + 1, 1))}
+                      disabled={!canGoNext}
+                      aria-label="Luna urmatoare"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  </div>
+
+                  <div className={styles.weekdayGrid} aria-hidden="true">
+                    {["Lu", "Ma", "Mi", "Jo", "Vi", "Sa", "Du"].map((day) => (
+                      <span key={day}>{day}</span>
+                    ))}
+                  </div>
+
+                  <div className={styles.monthGrid}>
+                    {calendarDates.map((date, index) => {
+                      if (!date) {
+                        return <span className={styles.emptyDateCell} key={`empty-${index}`} />;
+                      }
+
+                      const value = dateValue(date);
+                      const isAvailable = availableDateValues.has(value);
+                      const isSelected = value === selectedDate;
+
+                      return (
+                        <button
+                          className={isSelected ? styles.selectedCalendarDay : styles.calendarDay}
+                          disabled={!isAvailable}
+                          key={value}
+                          onClick={() => onDateChange(value)}
+                          type="button"
+                          aria-pressed={isSelected}
+                        >
+                          {date.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-
-                <div className={styles.weekdayGrid} aria-hidden="true">
-                  {["Lu", "Ma", "Mi", "Jo", "Vi", "Sa", "Du"].map((day) => (
-                    <span key={day}>{day}</span>
-                  ))}
-                </div>
-
-                <div className={styles.monthGrid}>
-                  {calendarDates.map((date, index) => {
-                    if (!date) {
-                      return <span className={styles.emptyDateCell} key={`empty-${index}`} />;
-                    }
-
-                    const value = dateValue(date);
-                    const isAvailable = availableDateValues.has(value);
-                    const isSelected = value === selectedDate;
-
-                    return (
-                      <button
-                        className={isSelected ? styles.selectedCalendarDay : styles.calendarDay}
-                        disabled={!isAvailable}
-                        key={value}
-                        onClick={() => onDateChange(value)}
-                        type="button"
-                        aria-pressed={isSelected}
-                      >
-                        {date.getDate()}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </label>
+              ) : null}
+            </div>
+          </label>
 
         <label>
           <span><Clock size={18} /> Ora</span>
@@ -296,6 +341,11 @@ export function BookingForm({
         </label>
 
         <label>
+          <span><UserRound size={18} /> Varsta copilului</span>
+          <input name="childAge" type="text" placeholder="Ex: 4 ani, 8 luni" required />
+        </label>
+
+        <label>
           <span><Phone size={18} /> Telefon</span>
           <input
             name="phone"
@@ -319,8 +369,8 @@ export function BookingForm({
       </div>
 
       <label className={styles.fullLabel}>
-        <span>Detalii utile</span>
-        <textarea name="notes" rows={4} placeholder="Varsta copilului, motivul consultului sau alte informatii importante" />
+        <span>Motivul prezentarii</span>
+        <textarea name="notes" rows={4} placeholder="Descrie pe scurt motivul consultului sau alte informatii importante" />
       </label>
 
       <div className={styles.noticeBox}>
@@ -328,16 +378,39 @@ export function BookingForm({
         <p>{appointmentNotice}</p>
       </div>
 
-      <button className={styles.primaryButton} disabled={services.length === 0 || availableDates.length === 0} type="submit">
-        Trimite cererea de programare
-      </button>
+        <SubmitButton disabled={services.length === 0 || availableDates.length === 0} />
 
-      {formState.status !== "idle" ? (
-        <div className={formState.status === "error" ? styles.errorBox : styles.successBox} role="status">
+      {formState.status === "error" ? (
+        <div className={styles.errorBox} role="status">
           <CheckCircle2 size={20} />
           {formState.message}
         </div>
       ) : null}
-    </form>
+
+      </form>
+
+      {isSuccessModalOpen ? (
+        <div className={styles.bookingModalOverlay} role="presentation">
+          <div className={styles.bookingModal} role="dialog" aria-modal="true" aria-labelledby="booking-confirmation-title">
+            <button
+              aria-label="Inchide confirmarea"
+              className={styles.bookingModalClose}
+              onClick={() => setIsSuccessModalOpen(false)}
+              type="button"
+            >
+              <X size={18} />
+            </button>
+            <div className={styles.bookingModalIcon}>
+              <CheckCircle2 size={32} />
+            </div>
+            <h2 id="booking-confirmation-title">Cererea a fost trimisa</h2>
+            <p>{formState.message || "Cererea de programare a fost trimisa."}</p>
+            <button className={styles.primaryButton} onClick={() => setIsSuccessModalOpen(false)} type="button">
+              Am inteles
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

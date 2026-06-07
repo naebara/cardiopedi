@@ -699,6 +699,90 @@
   opacity: 0.5;
 }
 
+.buttonSpinner {
+  animation: spin 0.8s linear infinite;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  border-top-color: #ffffff;
+  height: 18px;
+  width: 18px;
+}
+
+.bookingModalOverlay {
+  align-items: center;
+  background: rgba(20, 48, 71, 0.48);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 20px;
+  position: fixed;
+  z-index: 100;
+}
+
+.bookingModal {
+  background: #ffffff;
+  border: 1px solid rgba(41, 126, 168, 0.16);
+  border-radius: 8px;
+  box-shadow: 0 30px 80px rgba(20, 48, 71, 0.28);
+  color: #143047;
+  max-width: 440px;
+  padding: 30px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.bookingModalClose {
+  align-items: center;
+  background: #f4faf8;
+  border: 1px solid #d7e8ea;
+  border-radius: 8px;
+  color: #5e7784;
+  cursor: pointer;
+  display: inline-flex;
+  height: 36px;
+  justify-content: center;
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 36px;
+}
+
+.bookingModalIcon {
+  align-items: center;
+  background: #e9f8f0;
+  border-radius: 999px;
+  color: #1f7660;
+  display: inline-flex;
+  height: 62px;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 62px;
+}
+
+.bookingModal h2 {
+  font-size: 24px;
+  line-height: 1.2;
+  margin: 0 0 10px;
+}
+
+.bookingModal p {
+  color: #4a6572;
+  line-height: 1.6;
+  margin: 0 0 22px;
+}
+
+.bookingModal .primaryButton {
+  box-shadow: none;
+  min-width: 160px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .contactPanel hr {
   border: 0;
   border-top: 1px solid #e6f0f1;

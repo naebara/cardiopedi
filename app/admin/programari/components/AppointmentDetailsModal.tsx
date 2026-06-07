@@ -73,9 +73,11 @@ function PanelDetailRow({ icon, label, value }: { icon: React.ReactNode; label: 
 
 export function AppointmentDetailsContent({
   appointment,
+  canManageAppointments,
   onClose,
 }: {
   appointment: Appointment;
+  canManageAppointments: boolean;
   onClose: () => void;
 }) {
   return (
@@ -118,9 +120,13 @@ export function AppointmentDetailsContent({
         ) : null}
       </Stack>
 
-      <Divider />
+      {canManageAppointments ? (
+        <>
+          <Divider />
 
-      <AppointmentActions appointment={appointment} onClose={onClose} />
+          <AppointmentActions appointment={appointment} onClose={onClose} />
+        </>
+      ) : null}
     </Stack>
   );
 }
@@ -221,9 +227,11 @@ function AppointmentActions({
 
 export function AppointmentDetailsPanel({
   appointment,
+  canManageAppointments,
   onClose,
 }: {
   appointment: Appointment | null;
+  canManageAppointments: boolean;
   onClose: () => void;
 }) {
   return (
@@ -283,9 +291,11 @@ export function AppointmentDetailsPanel({
             ) : null}
           </div>
 
-          <div className={styles.detailsPanelActions}>
-            <AppointmentActions appointment={appointment} onClose={onClose} />
-          </div>
+          {canManageAppointments ? (
+            <div className={styles.detailsPanelActions}>
+              <AppointmentActions appointment={appointment} onClose={onClose} />
+            </div>
+          ) : null}
         </>
       ) : (
         <Stack gap="xs" className={styles.detailsPanelEmpty}>
@@ -304,9 +314,11 @@ export function AppointmentDetailsPanel({
 
 export function AppointmentDetailsModal({
   appointment,
+  canManageAppointments,
   onClose,
 }: {
   appointment: Appointment | null;
+  canManageAppointments: boolean;
   onClose: () => void;
 }) {
   function handleClose() {
@@ -328,7 +340,7 @@ export function AppointmentDetailsModal({
       }
     >
       {appointment ? (
-        <AppointmentDetailsContent appointment={appointment} onClose={onClose} />
+        <AppointmentDetailsContent appointment={appointment} canManageAppointments={canManageAppointments} onClose={onClose} />
       ) : null}
     </Modal>
   );

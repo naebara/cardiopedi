@@ -1,7 +1,6 @@
-import { updateUserAccess } from "@/app/admin/actions";
 import { ADMIN_FEATURES, requireMasterUser } from "@/lib/admin-features";
 import { prisma } from "@/lib/prisma";
-import { CreateUserForm } from "./CreateUserForm";
+import { UsersManager } from "./UsersManager";
 import styles from "../admin.module.css";
 
 type UserRow = {
@@ -49,49 +48,7 @@ export default async function AdminUsersPage() {
         <span className={styles.badge}>Master only</span>
       </header>
 
-      <CreateUserForm features={ADMIN_FEATURES} />
-
-      <section className={styles.grid}>
-        {users.map((user) => (
-          <form action={updateUserAccess} className={styles.card} key={user.id}>
-            <input name="userId" type="hidden" value={user.id} />
-            <h2>{user.name || user.email}</h2>
-            <p className={styles.muted}>{user.email}</p>
-
-            <label className={styles.masterToggle}>
-              <input
-                defaultChecked={user.isMasterUser}
-                disabled={user.id === currentUser.id}
-                name="isMasterUser"
-                type="checkbox"
-              />
-              Master user
-            </label>
-
-            <div className={styles.featureGrid}>
-              {ADMIN_FEATURES.map((feature) => (
-                <label className={styles.featureCheck} key={feature.key}>
-                  <input
-                    defaultChecked={user.isMasterUser || user.features.includes(feature.key)}
-                    disabled={user.isMasterUser}
-                    name="features"
-                    type="checkbox"
-                    value={feature.key}
-                  />
-                  <span>
-                    <strong>{feature.name}</strong>
-                    {feature.description}
-                  </span>
-                </label>
-              ))}
-            </div>
-
-            <button className={styles.saveButton} type="submit">
-              Salveaza accesul
-            </button>
-          </form>
-        ))}
-      </section>
+      <UsersManager currentUserId={currentUser.id} features={ADMIN_FEATURES} users={users} />
     </>
   );
 }

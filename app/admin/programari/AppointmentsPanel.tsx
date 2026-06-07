@@ -44,9 +44,11 @@ function appointmentMatchesSearch(appointment: Appointment, search: string) {
 
 export function AppointmentsPanel({
   appointments,
+  canManageAppointments,
   scheduleSlots,
 }: {
   appointments: Appointment[];
+  canManageAppointments: boolean;
   scheduleSlots: AppointmentScheduleSlot[];
 }) {
   const [mode, setMode] = useState<Mode>("calendar");
@@ -223,6 +225,7 @@ export function AppointmentsPanel({
             <div className={styles.daySplitCalendar}>
               <AdminCalendarGrid
                 appointments={filteredAppointments}
+                canManageAppointments={canManageAppointments}
                 currentDate={currentDate}
                 occupiedAppointments={appointments}
                 onSelect={(appointment) => setSelectedId(appointment.id)}
@@ -232,7 +235,7 @@ export function AppointmentsPanel({
               />
             </div>
             <div className={styles.daySplitDetails}>
-              <AppointmentDetailsPanel appointment={selected} onClose={() => setSelectedId(null)} />
+              <AppointmentDetailsPanel appointment={selected} canManageAppointments={canManageAppointments} onClose={() => setSelectedId(null)} />
             </div>
           </div>
         ) : period === "month" ? (
@@ -243,6 +246,7 @@ export function AppointmentsPanel({
           <div className={styles.calendarScroll}>
             <AdminCalendarGrid
               appointments={filteredAppointments}
+              canManageAppointments={canManageAppointments}
               currentDate={currentDate}
               occupiedAppointments={appointments}
               onSelect={(appointment) => setSelectedId(appointment.id)}
@@ -254,7 +258,9 @@ export function AppointmentsPanel({
         )}
       </div>
 
-      {!useCalendarSplit ? <AppointmentDetailsModal appointment={selected} onClose={() => setSelectedId(null)} /> : null}
+      {!useCalendarSplit ? (
+        <AppointmentDetailsModal appointment={selected} canManageAppointments={canManageAppointments} onClose={() => setSelectedId(null)} />
+      ) : null}
     </div>
   );
 }

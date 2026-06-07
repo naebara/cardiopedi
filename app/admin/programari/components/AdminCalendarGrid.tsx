@@ -11,6 +11,7 @@ interface AdminCalendarGridProps {
   currentDate: Date; // represents the day or week we are looking at
   view: "day" | "week";
   appointments: Appointment[];
+  canManageAppointments: boolean;
   occupiedAppointments: Appointment[];
   onSelect?: (appointment: Appointment) => void;
   scheduleSlots: AppointmentScheduleSlot[];
@@ -37,6 +38,7 @@ function buildSlots(start: string, end: string, durationMin: number) {
 
 export function AdminCalendarGrid({
   appointments,
+  canManageAppointments,
   currentDate,
   occupiedAppointments,
   onSelect,
@@ -80,6 +82,11 @@ export function AdminCalendarGrid({
   }
 
   function onDragStart(event: DragEvent<HTMLDivElement>, appointment: Appointment) {
+    if (!canManageAppointments) {
+      event.preventDefault();
+      return;
+    }
+
     event.dataTransfer.effectAllowed = "move";
     event.dataTransfer.setData("text/plain", appointment.id);
     draggedAppointmentIdRef.current = appointment.id;
@@ -235,7 +242,7 @@ export function AdminCalendarGrid({
                     />
                   );
                 })}
-                {dayDropSlots.map((slot) => {
+                {canManageAppointments ? dayDropSlots.map((slot) => {
                   const isCurrentSelectedSlot = selectedAppointment?.date === val && selectedAppointment.time === slot.time;
                   const isOccupied = occupiedSlotValues.has(`${val}|${slot.time}`) && !isCurrentSelectedSlot;
                   if (isOccupied) {
@@ -267,7 +274,7 @@ export function AdminCalendarGrid({
                       }}
                     />
                   );
-                })}
+                }) : null}
                 {dayAppointments.map((apt) => {
                   const { top, height } = calculateEventPosition(apt.time, apt.durationMin, START_HOUR, PIXELS_PER_HOUR);
                   const isSelected = apt.id === selectedAppointmentId;
@@ -281,7 +288,7 @@ export function AdminCalendarGrid({
                     <Box
                       key={apt.id}
                       className={`${styles.calendarEvent} ${isSelected ? styles.calendarEventSelected : ""}`}
-                      draggable={!isPending}
+                      draggable={canManageAppointments && !isPending}
                       onClick={() => {
                         if (suppressNextClickRef.current || draggedAppointmentIdRef.current === apt.id) {
                           return;

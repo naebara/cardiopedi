@@ -90,7 +90,7 @@ export async function requestPasswordReset(_prevState: ForgotPasswordState, form
                 '',
                 'Dupa autentificare, schimba parola din Setari cont.',
                 '',
-                'Daca nu ai solicitat aceasta resetare, contacteaza un master user.',
+                'Daca nu ai solicitat aceasta resetare, contacteaza admnistratorul.',
             ].join('\n'),
             to: email,
         });

@@ -1,7 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+
+const APPOINTMENT_NOTIFICATION_EMAIL = "natanaelbarag@gmail.com";
 
 export type AppointmentFormState = {
   message: string;
@@ -44,6 +47,121 @@ function buildSlots(start: string, end: string, durationMin: number) {
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatAppointmentDate(value: string) {
+  const date = new Date(`${value}T12:00:00.000Z`);
+  return new Intl.DateTimeFormat("ro-RO", {
+    day: "2-digit",
+    month: "long",
+    weekday: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function appointmentNotificationText(appointment: {
+  childName: string;
+  date: string;
+  durationMin: number;
+  email: string;
+  notes: string;
+  parentName: string;
+  phone: string;
+  service: string;
+  time: string;
+}) {
+  return [
+    "Programare noua Cardiopedi",
+    "",
+    `Data: ${formatAppointmentDate(appointment.date)}`,
+    `Ora: ${appointment.time} (${appointment.durationMin} min)`,
+    `Serviciu: ${appointment.service}`,
+    "",
+    `Copil: ${appointment.childName}`,
+    `Parinte: ${appointment.parentName}`,
+    `Telefon: ${appointment.phone}`,
+    `Email: ${appointment.email || "-"}`,
+    `Observatii: ${appointment.notes || "-"}`,
+  ].join("\n");
+}
+
+function appointmentNotificationHtml(appointment: {
+  childName: string;
+  date: string;
+  durationMin: number;
+  email: string;
+  notes: string;
+  parentName: string;
+  phone: string;
+  service: string;
+  time: string;
+}) {
+  const rows = [
+    ["Data", formatAppointmentDate(appointment.date)],
+    ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
+    ["Serviciu", appointment.service],
+    ["Copil", appointment.childName],
+    ["Parinte", appointment.parentName],
+    ["Telefon", appointment.phone],
+    ["Email", appointment.email || "-"],
+    ["Observatii", appointment.notes || "-"],
+  ];
+
+  return `
+    <div style="margin:0;padding:24px;background:#f4faf8;font-family:Arial,Helvetica,sans-serif;color:#143047;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #d7e8ea;border-radius:12px;overflow:hidden;">
+        <tr>
+          <td style="padding:20px 22px;background:#143047;color:#ffffff;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a8dfc2;">Cardiopedi</div>
+            <div style="font-size:22px;font-weight:800;line-height:1.2;margin-top:6px;">Programare noua</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 22px;">
+            <div style="display:inline-block;background:#e9f8f0;color:#1f7660;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:800;margin-bottom:16px;">
+              ${escapeHtml(formatAppointmentDate(appointment.date))} · ${escapeHtml(appointment.time)}
+            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              ${rows.map(([label, value]) => `
+                <tr>
+                  <td style="width:116px;padding:10px 0;border-bottom:1px solid #e6f0f1;color:#5e7784;font-size:12px;font-weight:800;text-transform:uppercase;vertical-align:top;">${escapeHtml(label)}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #e6f0f1;color:#143047;font-size:15px;font-weight:700;line-height:1.4;vertical-align:top;">${escapeHtml(value)}</td>
+                </tr>
+              `).join("")}
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+async function notifyNewAppointment(appointment: {
+  childName: string;
+  date: string;
+  durationMin: number;
+  email: string;
+  notes: string;
+  parentName: string;
+  phone: string;
+  service: string;
+  time: string;
+}) {
+  await sendMail({
+    html: appointmentNotificationHtml(appointment),
+    subject: `Programare noua: ${appointment.childName} - ${appointment.date} ${appointment.time}`,
+    text: appointmentNotificationText(appointment),
+    to: APPOINTMENT_NOTIFICATION_EMAIL,
+  });
 }
 
 export async function createAppointment(
@@ -113,6 +231,8 @@ export async function createAppointment(
     };
   }
 
+  const appointmentId = crypto.randomUUID();
+
   try {
     await prisma.$executeRaw`
       INSERT INTO "Appointment" (
@@ -129,7 +249,7 @@ export async function createAppointment(
         "updatedAt"
       )
       VALUES (
-        ${crypto.randomUUID()},
+        ${appointmentId},
         ${appointmentDate},
         ${time},
         ${matchingScheduleSlot.durationMin},
@@ -153,8 +273,24 @@ export async function createAppointment(
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
 
+  try {
+    await notifyNewAppointment({
+      childName,
+      date,
+      durationMin: matchingScheduleSlot.durationMin,
+      email,
+      notes,
+      parentName,
+      phone,
+      service,
+      time,
+    });
+  } catch (error) {
+    console.error("New appointment notification email error:", error);
+  }
+
   return {
-    message: "Cererea de programare a fost trimisa si apare in admin cu status Noua.",
+    message: "Cererea de programare a fost trimisa.",
     status: "success",
   };
 }

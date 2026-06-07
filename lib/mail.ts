@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 
 type MailMessage = {
+  html?: string;
   subject: string;
   text: string;
   to: string;
@@ -22,6 +23,7 @@ async function sendWithResend(message: MailMessage) {
   const response = await fetch("https://api.resend.com/emails", {
     body: JSON.stringify({
       from: process.env.MAIL_FROM,
+      html: message.html,
       subject: message.subject,
       text: message.text,
       to: [message.to],
@@ -52,6 +54,7 @@ async function sendWithSmtp(message: MailMessage) {
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM,
+    html: message.html,
     subject: message.subject,
     text: message.text,
     to: message.to,

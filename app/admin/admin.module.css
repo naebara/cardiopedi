@@ -443,6 +443,59 @@
   padding: 12px;
 }
 
+.createUserCard {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.userFormGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.userFormGrid label {
+  display: grid;
+  gap: 7px;
+}
+
+.userFormGrid span {
+  color: #24485d;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.userFormGrid input {
+  background: #ffffff;
+  border: 1px solid #cfe0e3;
+  border-radius: 8px;
+  color: #143047;
+  font: inherit;
+  min-height: 42px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.successText,
+.errorText {
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.successText {
+  background: #e9f8f0;
+  color: #1f7660;
+}
+
+.errorText {
+  background: #fff0f0;
+  color: #b42318;
+}
+
 .featurePill {
   background: #e9f8f0;
   color: #1f7660;
@@ -917,6 +970,7 @@
   .detailList,
   .calendarGrid,
   .featureGrid,
+  .userFormGrid,
   .formRow,
   .scheduleStats {
     grid-template-columns: 1fr;

@@ -1,8 +1,89 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { ADMIN_FEATURES, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
 import { prisma } from "@/lib/prisma";
+
+export type CreateAdminUserState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
+const createAdminUserSchema = z.object({
+  email: z.string().trim().email("Email invalid"),
+  name: z.string().trim().optional(),
+  password: z.string().min(6, "Parola trebuie sa aiba cel putin 6 caractere"),
+});
+
+export async function createAdminUser(_prevState: CreateAdminUserState, formData: FormData): Promise<CreateAdminUserState> {
+  const currentUser = await requireMasterUser();
+  const result = createAdminUserSchema.safeParse({
+    email: formData.get("email"),
+    name: formData.get("name"),
+    password: formData.get("password"),
+  });
+
+  if (!result.success) {
+    return {
+      message: result.error.issues[0]?.message ?? "Datele contului nu sunt valide.",
+      status: "error",
+    };
+  }
+
+  const { name, password } = result.data;
+  const email = result.data.email.toLowerCase();
+  const isMasterUser = formData.get("isMasterUser") === "on";
+  const grantedFeatures = formData
+    .getAll("features")
+    .map(String)
+    .filter(isKnownFeature);
+
+  const existingUser = await prisma.user.findUnique({ where: { email } });
+  if (existingUser) {
+    return {
+      message: "Exista deja un utilizator cu acest email.",
+      status: "error",
+    };
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const userId = crypto.randomUUID();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.create({
+      data: {
+        email,
+        id: userId,
+        isMasterUser,
+        name: name || null,
+        password: hashedPassword,
+      },
+    });
+
+    if (!isMasterUser) {
+      for (const featureKey of grantedFeatures) {
+        await tx.userFeatureGrant.create({
+          data: {
+            createdBy: currentUser.id,
+            featureKey,
+            id: crypto.randomUUID(),
+            userId,
+          },
+        });
+      }
+    }
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath("/admin");
+
+  return {
+    message: "Utilizatorul a fost creat.",
+    status: "success",
+  };
+}
 
 export async function updateUserAccess(formData: FormData) {
   const currentUser = await requireMasterUser();

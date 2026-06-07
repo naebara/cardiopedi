@@ -7,7 +7,7 @@ export const authConfig = {
     callbacks: {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
-            const isOnAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/signup');
+            const isOnAuthPage = nextUrl.pathname.startsWith('/login');
             const publicPaths = ['/', '/servicii', '/programari', '/despre', '/contact'];
             const isPublicPage = publicPaths.includes(nextUrl.pathname);
 

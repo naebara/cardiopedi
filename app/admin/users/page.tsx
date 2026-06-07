@@ -1,6 +1,7 @@
 import { updateUserAccess } from "@/app/admin/actions";
 import { ADMIN_FEATURES, requireMasterUser } from "@/lib/admin-features";
 import { prisma } from "@/lib/prisma";
+import { CreateUserForm } from "./CreateUserForm";
 import styles from "../admin.module.css";
 
 type UserRow = {
@@ -47,6 +48,8 @@ export default async function AdminUsersPage() {
         </div>
         <span className={styles.badge}>Master only</span>
       </header>
+
+      <CreateUserForm features={ADMIN_FEATURES} />
 
       <section className={styles.grid}>
         {users.map((user) => (

@@ -10,7 +10,6 @@ import {
   TextInput,
   PasswordInput,
   Button,
-  Anchor,
   Box,
 } from '@mantine/core';
 import classes from './Login.module.css';
@@ -80,12 +79,6 @@ export default function LoginView() {
                         )}
                     </form>
 
-                    <p className={classes.accountNote}>
-                        Ai nevoie de cont?{' '}
-                        <Anchor component={Link} href="/signup" className={classes.link}>
-                            Creeaza cont
-                        </Anchor>
-                    </p>
                 </Paper>
 
                 <div className={classes.coverPanel}>

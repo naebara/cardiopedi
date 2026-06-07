@@ -14,7 +14,7 @@ export default async function ContactPage() {
     <main className={styles.siteShell}>
       <PublicHeader />
       <section className={styles.contactPage}>
-        <div>
+        <div className={styles.contactIntro}>
           <p className={styles.eyebrow}>Contact</p>
           <h1>Ai nevoie de o programare sau de detalii despre servicii?</h1>
           <p>Completeaza formularul de programare sau foloseste datele de contact ale cabinetului.</p>
@@ -23,34 +23,32 @@ export default async function ContactPage() {
           </Link>
         </div>
 
-        <div className={styles.contactAside}>
-          <div className={styles.contactPanel}>
-            <p><Phone size={18} /> {clinic.phone}</p>
-            <p><Mail size={18} /> {clinic.email}</p>
-            <p>
-              <MapPin size={18} />
-              <a className={styles.mapLink} href={clinic.mapUrl} rel="noreferrer" target="_blank">
-                {clinic.address}
-              </a>
+        <div className={styles.contactPanel}>
+          <p><Phone size={18} /> {clinic.phone}</p>
+          <p><Mail size={18} /> {clinic.email}</p>
+          <p>
+            <MapPin size={18} />
+            <a className={styles.mapLink} href={clinic.mapUrl} rel="noreferrer" target="_blank">
+              {clinic.address}
+            </a>
+          </p>
+          <hr />
+          {schedule.map((item) => (
+            <p key={item.id}>
+              <span>{item.dayLabel}</span>
+              <strong>{item.interval}</strong>
             </p>
-            <hr />
-            {schedule.map((item) => (
-              <p key={item.id}>
-                <span>{item.dayLabel}</span>
-                <strong>{item.interval}</strong>
-              </p>
-            ))}
-          </div>
+          ))}
+        </div>
 
-          <div className={styles.mapEmbed}>
-            <iframe
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              src={clinic.mapEmbedUrl}
-              title="Harta Cardiopedi, Oradea, str. Tudor Vladimirescu nr. 8"
-            />
-          </div>
+        <div className={styles.mapEmbed}>
+          <iframe
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            src={clinic.mapEmbedUrl}
+            title="Harta Cardiopedi, Oradea, str. Tudor Vladimirescu nr. 8"
+          />
         </div>
       </section>
       <PublicFooter schedule={schedule} />

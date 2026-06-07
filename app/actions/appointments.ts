@@ -4,7 +4,10 @@ import { revalidatePath } from "next/cache";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 
-const APPOINTMENT_NOTIFICATION_EMAIL = "natanaelbarag@gmail.com";
+const APPOINTMENT_NOTIFICATION_EMAILS = [
+  "natanaelbarag@gmail.com",
+  "mihaelabadulescu@yahoo.com",
+];
 
 export type AppointmentFormState = {
   message: string;
@@ -160,7 +163,7 @@ async function notifyNewAppointment(appointment: {
     html: appointmentNotificationHtml(appointment),
     subject: `Programare noua: ${appointment.childName} - ${appointment.date} ${appointment.time}`,
     text: appointmentNotificationText(appointment),
-    to: APPOINTMENT_NOTIFICATION_EMAIL,
+    to: APPOINTMENT_NOTIFICATION_EMAILS,
   });
 }
 

@@ -70,7 +70,12 @@ export function PublicFooter({ schedule = [] }: { schedule?: PublicScheduleSlot[
       <div>
         <h3>Contact</h3>
         <p><Phone size={16} /> {clinic.phone}</p>
-        <p><MapPin size={16} /> {clinic.address}</p>
+        <p>
+          <MapPin size={16} />
+          <a className={styles.mapLink} href={clinic.mapUrl} rel="noreferrer" target="_blank">
+            {clinic.address}
+          </a>
+        </p>
       </div>
     </footer>
   );

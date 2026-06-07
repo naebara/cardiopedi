@@ -23,17 +23,34 @@ export default async function ContactPage() {
           </Link>
         </div>
 
-        <div className={styles.contactPanel}>
-          <p><Phone size={18} /> {clinic.phone}</p>
-          <p><Mail size={18} /> {clinic.email}</p>
-          <p><MapPin size={18} /> {clinic.address}</p>
-          <hr />
-          {schedule.map((item) => (
-            <p key={item.id}>
-              <span>{item.dayLabel}</span>
-              <strong>{item.interval}</strong>
+        <div className={styles.contactAside}>
+          <div className={styles.contactPanel}>
+            <p><Phone size={18} /> {clinic.phone}</p>
+            <p><Mail size={18} /> {clinic.email}</p>
+            <p>
+              <MapPin size={18} />
+              <a className={styles.mapLink} href={clinic.mapUrl} rel="noreferrer" target="_blank">
+                {clinic.address}
+              </a>
             </p>
-          ))}
+            <hr />
+            {schedule.map((item) => (
+              <p key={item.id}>
+                <span>{item.dayLabel}</span>
+                <strong>{item.interval}</strong>
+              </p>
+            ))}
+          </div>
+
+          <div className={styles.mapEmbed}>
+            <iframe
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              src={clinic.mapEmbedUrl}
+              title="Harta Cardiopedi, Oradea, str. Tudor Vladimirescu nr. 8"
+            />
+          </div>
         </div>
       </section>
       <PublicFooter schedule={schedule} />

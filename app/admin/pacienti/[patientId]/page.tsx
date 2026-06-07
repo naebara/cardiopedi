@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, Mail, Phone, UserRound } from "lucide-react";
-import { requireFeature } from "@/lib/admin-features";
+import { canAccess, requireFeature } from "@/lib/admin-features";
 import { getAdminPatientDetails } from "@/lib/appointments";
+import { DeletePatientButton } from "../DeletePatientButton";
 import { PatientHistoryTable } from "./PatientHistoryTable";
 import styles from "../../admin.module.css";
 
@@ -11,7 +12,7 @@ export default async function AdminPatientDetailsPage({
 }: {
   params: Promise<{ patientId: string }>;
 }) {
-  await requireFeature("patients.view");
+  const currentUser = await requireFeature("patients.view");
   const { patientId } = await params;
   const patient = await getAdminPatientDetails(patientId);
 
@@ -30,6 +31,9 @@ export default async function AdminPatientDetailsPage({
           <h1>{patient.childName}</h1>
           <p>Detalii generale si istoricul programarilor pentru pacient.</p>
         </div>
+        {canAccess(currentUser, "patients.manage") ? (
+          <DeletePatientButton patientId={patientId} patientName={patient.childName} />
+        ) : null}
       </header>
 
       <section className={styles.patientDetailGrid}>

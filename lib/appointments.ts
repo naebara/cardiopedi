@@ -91,6 +91,11 @@ export async function getAdminAppointments() {
       "status"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "DeletedPatient" dp
+        WHERE dp."normalizedName" = LOWER(TRIM("Appointment"."childName"))
+      )
     ORDER BY "date" ASC, "time" ASC
   `;
 
@@ -124,14 +129,19 @@ export async function getAdminPatients() {
     phones: string[];
   }>>`
     SELECT
-      (ARRAY_AGG("childName" ORDER BY "date" DESC, "time" DESC))[1] AS "childName",
-      (ARRAY_AGG("id" ORDER BY "date" DESC, "time" DESC))[1] AS "patientId",
-      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("parentName", '')), NULL) AS "parentNames",
-      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF("phone", '')), NULL) AS "phones"
-    FROM "Appointment"
-    WHERE "status" IN ('NEW', 'CONFIRMED')
-    GROUP BY LOWER("childName")
-    ORDER BY LOWER("childName") ASC
+      (ARRAY_AGG(a."childName" ORDER BY a."date" DESC, a."time" DESC))[1] AS "childName",
+      (ARRAY_AGG(a."id" ORDER BY a."date" DESC, a."time" DESC))[1] AS "patientId",
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(a."parentName", '')), NULL) AS "parentNames",
+      ARRAY_REMOVE(ARRAY_AGG(DISTINCT NULLIF(a."phone", '')), NULL) AS "phones"
+    FROM "Appointment" a
+    WHERE a."status" IN ('NEW', 'CONFIRMED')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "DeletedPatient" dp
+        WHERE dp."normalizedName" = LOWER(TRIM(a."childName"))
+      )
+    GROUP BY LOWER(TRIM(a."childName"))
+    ORDER BY LOWER(TRIM(a."childName")) ASC
   `;
 
   return rows.map((row) => ({
@@ -143,14 +153,19 @@ export async function getAdminPatients() {
 }
 
 export async function getAdminPatientDetails(patientId: string): Promise<AdminPatientDetails | null> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(patientId)) {
+  if (!patientId.trim()) {
     return null;
   }
 
   const patientAnchor = await prisma.$queryRaw<Array<{ childName: string }>>`
-    SELECT "childName"
-    FROM "Appointment"
-    WHERE "id" = ${patientId}
+    SELECT a."childName"
+    FROM "Appointment" a
+    WHERE a."id" = ${patientId}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "DeletedPatient" dp
+        WHERE dp."normalizedName" = LOWER(TRIM(a."childName"))
+      )
     LIMIT 1
   `;
 
@@ -175,9 +190,14 @@ export async function getAdminPatientDetails(patientId: string): Promise<AdminPa
       "email",
       "notes",
       "status"
-    FROM "Appointment"
-    WHERE LOWER("childName") = LOWER(${patientAnchor[0].childName})
-    ORDER BY "date" DESC, "time" DESC
+    FROM "Appointment" a
+    WHERE LOWER(TRIM(a."childName")) = LOWER(TRIM(${patientAnchor[0].childName}))
+      AND NOT EXISTS (
+        SELECT 1
+        FROM "DeletedPatient" dp
+        WHERE dp."normalizedName" = LOWER(TRIM(a."childName"))
+      )
+    ORDER BY a."date" DESC, a."time" DESC
   `;
 
   if (!rows[0]) {

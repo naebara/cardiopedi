@@ -16,6 +16,11 @@ export type AccountPasswordState = {
   status: "error" | "idle" | "success";
 };
 
+export type SoftDeletePatientState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
 const createAdminUserSchema = z.object({
   email: z.string().trim().email("Email invalid"),
   name: z.string().trim().optional(),
@@ -30,6 +35,10 @@ const accountPasswordSchema = z.object({
   message: "Parolele nu coincid",
   path: ["confirmPassword"],
 });
+
+function normalizedPatientName(value: string) {
+  return value.trim().toLocaleLowerCase("ro-RO");
+}
 
 export async function updateOwnPassword(_prevState: AccountPasswordState, formData: FormData): Promise<AccountPasswordState> {
   const currentUser = await getCurrentAdminUser();
@@ -191,6 +200,54 @@ export async function updateUserAccess(formData: FormData) {
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
+}
+
+export async function softDeletePatient(patientId: string): Promise<SoftDeletePatientState> {
+  const currentUser = await requireFeature("patients.manage");
+  const appointmentId = String(patientId ?? "").trim();
+
+  if (!appointmentId) {
+    return {
+      message: "Pacient invalid.",
+      status: "error",
+    };
+  }
+
+  const appointments = await prisma.$queryRaw<Array<{ childName: string }>>`
+    SELECT "childName"
+    FROM "Appointment"
+    WHERE "id" = ${appointmentId}
+    LIMIT 1
+  `;
+  const appointment = appointments[0];
+
+  if (!appointment?.childName.trim()) {
+    return {
+      message: "Pacientul nu a fost gasit.",
+      status: "error",
+    };
+  }
+
+  const normalizedName = normalizedPatientName(appointment.childName);
+
+  await prisma.$executeRaw`
+    INSERT INTO "DeletedPatient" ("id", "normalizedName", "displayName", "deletedBy")
+    VALUES (${crypto.randomUUID()}, ${normalizedName}, ${appointment.childName.trim()}, ${currentUser.id})
+    ON CONFLICT ("normalizedName") DO UPDATE SET
+      "displayName" = EXCLUDED."displayName",
+      "deletedAt" = NOW(),
+      "deletedBy" = EXCLUDED."deletedBy"
+  `;
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/programari");
+  revalidatePath("/admin/pacienti");
+  revalidatePath(`/admin/pacienti/${appointmentId}`);
+
+  return {
+    message: "Pacientul a fost ascuns din UI.",
+    status: "success",
+  };
 }
 
 function parsePriceCents(value: FormDataEntryValue | null) {

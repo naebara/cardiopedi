@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import type { AdminPatient } from "@/lib/appointments";
+import { DeletePatientButton } from "./DeletePatientButton";
 import styles from "../admin.module.css";
 
 function matchesSearch(patient: AdminPatient, search: string) {
@@ -20,7 +21,13 @@ function matchesSearch(patient: AdminPatient, search: string) {
   ].some((value) => value.toLocaleLowerCase("ro-RO").includes(query));
 }
 
-export function PatientsTable({ patients }: { patients: AdminPatient[] }) {
+export function PatientsTable({
+  canManagePatients,
+  patients,
+}: {
+  canManagePatients: boolean;
+  patients: AdminPatient[];
+}) {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const filteredPatients = useMemo(() => {
@@ -51,6 +58,7 @@ export function PatientsTable({ patients }: { patients: AdminPatient[] }) {
             <th>Copil</th>
             <th>Parinti / apartinatori</th>
             <th>Telefon</th>
+            {canManagePatients ? <th>Actiuni</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -71,11 +79,18 @@ export function PatientsTable({ patients }: { patients: AdminPatient[] }) {
               <td><strong>{patient.childName}</strong></td>
               <td>{patient.parentNames.join(", ") || "-"}</td>
               <td>{patient.phones.join(", ") || "-"}</td>
+              {canManagePatients ? (
+                <td>
+                  <div className={styles.tableActions}>
+                    <DeletePatientButton compact patientId={patient.patientId} patientName={patient.childName} />
+                  </div>
+                </td>
+              ) : null}
             </tr>
           ))}
           {filteredPatients.length === 0 ? (
             <tr>
-              <td colSpan={3}>Nu exista pacienti pentru cautarea curenta.</td>
+              <td colSpan={canManagePatients ? 4 : 3}>Nu exista pacienti pentru cautarea curenta.</td>
             </tr>
           ) : null}
         </tbody>

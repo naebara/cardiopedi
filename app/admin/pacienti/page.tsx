@@ -1,10 +1,10 @@
-import { requireFeature } from "@/lib/admin-features";
+import { canAccess, requireFeature } from "@/lib/admin-features";
 import { getAdminPatients } from "@/lib/appointments";
 import { PatientsTable } from "./PatientsTable";
 import styles from "../admin.module.css";
 
 export default async function AdminPatientsPage() {
-  await requireFeature("patients.view");
+  const currentUser = await requireFeature("patients.view");
   const patients = await getAdminPatients();
 
   return (
@@ -16,7 +16,7 @@ export default async function AdminPatientsPage() {
         </div>
       </header>
 
-      <PatientsTable patients={patients} />
+      <PatientsTable canManagePatients={canAccess(currentUser, "patients.manage")} patients={patients} />
     </>
   );
 }

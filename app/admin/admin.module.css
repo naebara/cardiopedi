@@ -723,12 +723,16 @@
 }
 
 .dangerButton {
+  align-items: center;
   background: #fff1f1;
   border: 1px solid #f1b6b6;
   border-radius: 8px;
   color: #9a2a2a;
   cursor: pointer;
+  display: inline-flex;
   font-weight: 900;
+  gap: 8px;
+  justify-content: center;
   min-height: 42px;
   padding: 0 14px;
   width: fit-content;
@@ -911,6 +915,14 @@
 
 .modalHeader p {
   margin-top: 6px;
+}
+
+.modalActions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
 }
 
 /* ── Hamburger button (hidden on desktop) ── */

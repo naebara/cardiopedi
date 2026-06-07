@@ -1,4 +1,4 @@
-import { CalendarDays, HeartPulse, LayoutDashboard, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
+import { CalendarDays, HeartPulse, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { AdminNavItem } from "./components/AdminNavItem";
 import { AdminContentWrapper } from "./components/AdminContentWrapper";
@@ -7,7 +7,6 @@ import { canAccess, getCurrentAdminUser } from "@/lib/admin-features";
 import styles from "./admin.module.css";
 
 const navItems = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard, feature: "admin.dashboard.view" as const },
   { href: "/admin/programari", label: "Programari", icon: CalendarDays, feature: "appointments.view" as const },
   { href: "/admin/pacienti", label: "Pacienti", icon: UsersRound, feature: "patients.view" as const },
   { href: "/admin/setari/program", label: "Program cabinet", icon: Settings, feature: "schedule.manage" as const },

@@ -4,12 +4,6 @@ import { prisma } from "@/lib/prisma";
 
 export const ADMIN_FEATURES = [
   {
-    key: "admin.dashboard.view",
-    name: "Dashboard",
-    description: "Poate vedea rezumatul panoului de control.",
-    category: "Admin",
-  },
-  {
     key: "appointments.view",
     name: "Vizualizare programari",
     description: "Poate vedea programarile in calendar si lista.",

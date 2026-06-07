@@ -1,58 +1,28 @@
-import Link from "next/link";
-import { CalendarDays, Clock, HeartPulse, UsersRound } from "lucide-react";
-import { canAccess, requireFeature } from "@/lib/admin-features";
-import styles from "./admin.module.css";
+import { redirect } from "next/navigation";
+import { canAccess, getCurrentAdminUser } from "@/lib/admin-features";
 
-export default async function AdminDashboardPage() {
-  const user = await requireFeature("admin.dashboard.view");
+export default async function AdminPage() {
+  const user = await getCurrentAdminUser();
 
-  const cards = [
-    { label: "Programari azi", value: "6", icon: CalendarDays },
-    { label: "Saptamana aceasta", value: "24", icon: Clock },
-    { label: "Pacienti in evidenta", value: "18", icon: UsersRound },
-    { label: "Servicii active", value: "4", icon: HeartPulse },
-  ];
+  if (canAccess(user, "appointments.view")) {
+    redirect("/admin/programari");
+  }
 
-  return (
-    <>
-      <header className={styles.pageHeader}>
-        <div>
-          <h1>Dashboard</h1>
-          <p>Rezumat rapid pentru programari, pacienti si setarile cabinetului.</p>
-        </div>
-        {user.isMasterUser ? <span className={styles.badge}>Acces complet</span> : null}
-      </header>
+  if (canAccess(user, "patients.view")) {
+    redirect("/admin/pacienti");
+  }
 
-      <section className={styles.statsGrid}>
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <article className={styles.card} key={card.label}>
-              <Icon size={22} color="#2f9f7f" />
-              <span className={styles.metric}>{card.value}</span>
-              <p className={styles.muted}>{card.label}</p>
-            </article>
-          );
-        })}
-      </section>
+  if (canAccess(user, "schedule.manage")) {
+    redirect("/admin/setari/program");
+  }
 
-      <section className={styles.grid} style={{ marginTop: 16 }}>
-        {canAccess(user, "appointments.view") ? (
-          <article className={styles.card}>
-            <h2>Programari</h2>
-            <p className={styles.muted}>Calendar si lista, cu filtre pentru azi, saptamana si luna.</p>
-            <Link className={styles.button} href="/admin/programari">Deschide programarile</Link>
-          </article>
-        ) : null}
+  if (canAccess(user, "services.manage")) {
+    redirect("/admin/setari/servicii");
+  }
 
-        {canAccess(user, "users.manage") ? (
-          <article className={styles.card}>
-            <h2>Feature access</h2>
-            <p className={styles.muted}>Acorda acces punctual altor utilizatori sau seteaza master user.</p>
-            <Link className={styles.button} href="/admin/users">Gestioneaza utilizatorii</Link>
-          </article>
-        ) : null}
-      </section>
-    </>
-  );
+  if (canAccess(user, "users.manage")) {
+    redirect("/admin/users");
+  }
+
+  redirect("/admin/no-access");
 }

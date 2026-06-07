@@ -12,7 +12,7 @@ export default function NoAccessPage() {
         Un master user poate activa feature-ul necesar pentru contul tau din sectiunea Utilizatori.
       </p>
       <Link className={styles.button} href="/admin">
-        Inapoi la dashboard
+        Inapoi in admin
       </Link>
       <div style={{ marginTop: 12 }}>
         <SignOutButton />

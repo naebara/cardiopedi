@@ -13,6 +13,11 @@ export type CreateAdminUserState = {
   status: "error" | "idle" | "success";
 };
 
+export type UpdateUserAccessState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
 export type AccountPasswordState = {
   message: string;
   status: "error" | "idle" | "success";
@@ -190,14 +195,20 @@ export async function createAdminUser(_prevState: CreateAdminUserState, formData
   };
 }
 
-export async function updateUserAccess(formData: FormData) {
+export async function updateUserAccess(formData: FormData): Promise<UpdateUserAccessState> {
   const currentUser = await requireMasterUser();
   const userId = String(formData.get("userId") ?? "");
 
   if (!userId) {
-    return;
+    return {
+      message: "Utilizator invalid.",
+      status: "error",
+    };
   }
 
+  const name = String(formData.get("name") ?? "").trim();
+  const emailResult = z.string().trim().email("Email invalid").safeParse(formData.get("email"));
+  const temporaryPassword = String(formData.get("temporaryPassword") ?? "");
   const isMasterUser = formData.get("isMasterUser") === "on";
   const receivesAppointmentEmails = formData.get("receivesAppointmentEmails") === "on";
   const receivesBlockedDateEmails = formData.get("receivesBlockedDateEmails") === "on";
@@ -206,12 +217,49 @@ export async function updateUserAccess(formData: FormData) {
     .map(String)
     .filter(isKnownFeature);
 
+  if (!emailResult.success) {
+    return {
+      message: emailResult.error.issues[0]?.message ?? "Email invalid.",
+      status: "error",
+    };
+  }
+
+  const email = emailResult.data.toLowerCase();
+  const existingUser = await prisma.user.findFirst({
+    where: {
+      email,
+      NOT: {
+        id: userId,
+      },
+    },
+  });
+
+  if (existingUser) {
+    return {
+      message: "Exista deja un utilizator cu acest email.",
+      status: "error",
+    };
+  }
+
+  if (temporaryPassword && temporaryPassword.length < 6) {
+    return {
+      message: "Parola temporara trebuie sa aiba cel putin 6 caractere.",
+      status: "error",
+    };
+  }
+
+  const hashedTemporaryPassword = temporaryPassword ? await bcrypt.hash(temporaryPassword, 10) : null;
+
   await prisma.$executeRaw`
     UPDATE "User"
     SET
+      "name" = ${name || null},
+      "email" = ${email},
       "isMasterUser" = ${userId === currentUser.id ? true : isMasterUser},
       "receivesAppointmentEmails" = ${receivesAppointmentEmails},
-      "receivesBlockedDateEmails" = ${receivesBlockedDateEmails}
+      "receivesBlockedDateEmails" = ${receivesBlockedDateEmails},
+      "password" = COALESCE(${hashedTemporaryPassword}, "password"),
+      "updatedAt" = NOW()
     WHERE "id" = ${userId}
   `;
 
@@ -236,6 +284,11 @@ export async function updateUserAccess(formData: FormData) {
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
+
+  return {
+    message: hashedTemporaryPassword ? "Utilizatorul a fost actualizat si parola temporara a fost setata." : "Utilizatorul a fost actualizat.",
+    status: "success",
+  };
 }
 
 export async function softDeletePatient(patientId: string): Promise<SoftDeletePatientState> {

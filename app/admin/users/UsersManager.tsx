@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { CalendarX2, MailCheck, Pencil, Plus, ShieldCheck, X } from "lucide-react";
-import { createAdminUser, updateUserAccess, type CreateAdminUserState } from "@/app/admin/actions";
+import { createAdminUser, updateUserAccess, type CreateAdminUserState, type UpdateUserAccessState } from "@/app/admin/actions";
 import type { AdminFeatureKey } from "@/lib/admin-features";
 import styles from "../admin.module.css";
 
@@ -28,6 +28,11 @@ type ActiveModal =
   | null;
 
 const initialCreateState: CreateAdminUserState = {
+  message: "",
+  status: "idle",
+};
+
+const initialUpdateState: UpdateUserAccessState = {
   message: "",
   status: "idle",
 };
@@ -137,10 +142,13 @@ function EditAccessForm({
   user: UserAccessRow;
 }) {
   const isOwnUser = user.id === currentUserId;
+  const [name, setName] = useState(user.name ?? "");
+  const [email, setEmail] = useState(user.email);
   const [isMasterUser, setIsMasterUser] = useState(user.isMasterUser);
   const [receivesAppointmentEmails, setReceivesAppointmentEmails] = useState(user.receivesAppointmentEmails);
   const [receivesBlockedDateEmails, setReceivesBlockedDateEmails] = useState(user.receivesBlockedDateEmails);
   const [selectedFeatures, setSelectedFeatures] = useState(user.features);
+  const [state, setState] = useState<UpdateUserAccessState>(initialUpdateState);
   const [isPending, startTransition] = useTransition();
 
   function setFeature(featureKey: AdminFeatureKey, checked: boolean) {
@@ -155,11 +163,19 @@ function EditAccessForm({
 
   function handleSubmit(formData: FormData) {
     startTransition(async () => {
-      await updateUserAccess(formData);
+      const result = await updateUserAccess(formData);
+      setState(result);
+
+      if (result.status === "error") {
+        return;
+      }
+
       onSaved({
         ...user,
+        email,
         features: isMasterUser ? [] : selectedFeatures,
         isMasterUser: isOwnUser ? true : isMasterUser,
+        name: name || null,
         receivesAppointmentEmails,
         receivesBlockedDateEmails,
       });
@@ -169,6 +185,41 @@ function EditAccessForm({
   return (
     <form action={handleSubmit} className={styles.modalFormStack}>
       <input name="userId" type="hidden" value={user.id} />
+
+      <div className={styles.userFormGrid}>
+        <label>
+          <span>Nume</span>
+          <input
+            autoComplete="name"
+            name="name"
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Nume complet"
+            type="text"
+            value={name}
+          />
+        </label>
+        <label>
+          <span>Email</span>
+          <input
+            autoComplete="email"
+            name="email"
+            onChange={(event) => setEmail(event.target.value)}
+            required
+            type="email"
+            value={email}
+          />
+        </label>
+        <label>
+          <span>Parola temporara</span>
+          <input
+            autoComplete="new-password"
+            minLength={6}
+            name="temporaryPassword"
+            placeholder="Lasa gol daca nu se schimba"
+            type="password"
+          />
+        </label>
+      </div>
 
       <label className={styles.masterToggle}>
         <input
@@ -222,8 +273,14 @@ function EditAccessForm({
         ))}
       </div>
 
+      {state.message ? (
+        <p className={state.status === "success" ? styles.successText : styles.errorText} aria-live="polite">
+          {state.message}
+        </p>
+      ) : null}
+
       <button className={styles.saveButton} disabled={isPending} type="submit">
-        Salveaza accesul
+        Salveaza utilizatorul
       </button>
     </form>
   );

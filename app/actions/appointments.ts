@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 const APPOINTMENT_NOTIFICATION_EMAILS = [
   "natanaelbarag@gmail.com",
+  "natanael.bara@emanuel.ro",
 ];
 
 export type AppointmentFormState = {

@@ -3,11 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import { clinic } from "../site-data";
 
 const APPOINTMENT_NOTIFICATION_EMAILS = [
   "natanaelbarag@gmail.com",
   "natanael.bara@emanuel.ro",
 ];
+
+type AppointmentEmailData = {
+  childName: string;
+  childAge: string;
+  date: string;
+  durationMin: number;
+  email: string;
+  notes: string;
+  parentName: string;
+  phone: string;
+  service: string;
+  servicePrice: string;
+  time: string;
+};
 
 export type AppointmentFormState = {
   message: string;
@@ -29,6 +44,10 @@ function isDateValue(value: string) {
 
 function isTimeValue(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function isEmailValue(value: string) {
+  return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function dateFromValue(value: string) {
@@ -75,18 +94,54 @@ function formatAppointmentDate(value: string) {
   });
 }
 
-function appointmentNotificationText(appointment: {
-  childName: string;
-  childAge: string;
-  date: string;
-  durationMin: number;
-  email: string;
-  notes: string;
-  parentName: string;
-  phone: string;
-  service: string;
-  time: string;
+function formatPrice(cents: number, currency: string) {
+  return new Intl.NumberFormat("ro-RO", {
+    currency,
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(cents / 100);
+}
+
+function hasActiveDiscount(service: {
+  discountEnabled: boolean;
+  discountEndsAt: Date | null;
+  discountPercent: number;
+  discountStartsAt: Date | null;
 }) {
+  const now = new Date();
+
+  if (!service.discountEnabled || service.discountPercent <= 0) {
+    return false;
+  }
+
+  if (service.discountStartsAt && service.discountStartsAt > now) {
+    return false;
+  }
+
+  if (service.discountEndsAt && service.discountEndsAt < now) {
+    return false;
+  }
+
+  return true;
+}
+
+function servicePriceLabel(service: {
+  currency: string;
+  discountEnabled: boolean;
+  discountEndsAt: Date | null;
+  discountPercent: number;
+  discountStartsAt: Date | null;
+  priceCents: number;
+}) {
+  if (!hasActiveDiscount(service)) {
+    return formatPrice(service.priceCents, service.currency);
+  }
+
+  const discountedPriceCents = Math.max(0, Math.round(service.priceCents * (100 - service.discountPercent) / 100));
+  return `${formatPrice(discountedPriceCents, service.currency)} (redus de la ${formatPrice(service.priceCents, service.currency)})`;
+}
+
+function appointmentNotificationText(appointment: AppointmentEmailData) {
   return [
     "Programare noua Cardiopedi",
     "",
@@ -103,18 +158,7 @@ function appointmentNotificationText(appointment: {
   ].join("\n");
 }
 
-function appointmentNotificationHtml(appointment: {
-  childName: string;
-  childAge: string;
-  date: string;
-  durationMin: number;
-  email: string;
-  notes: string;
-  parentName: string;
-  phone: string;
-  service: string;
-  time: string;
-}) {
+function appointmentNotificationHtml(appointment: AppointmentEmailData) {
   const rows = [
     ["Data", formatAppointmentDate(appointment.date)],
     ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
@@ -156,23 +200,105 @@ function appointmentNotificationHtml(appointment: {
   `;
 }
 
-async function notifyNewAppointment(appointment: {
-  childName: string;
-  childAge: string;
-  date: string;
-  durationMin: number;
-  email: string;
-  notes: string;
-  parentName: string;
-  phone: string;
-  service: string;
-  time: string;
-}) {
+function patientConfirmationText(appointment: AppointmentEmailData) {
+  return [
+    `Buna ziua, ${appointment.parentName},`,
+    "",
+    "Am primit cererea dumneavoastra de programare la Cardiopedi.",
+    "",
+    "Detalii programare:",
+    `Data: ${formatAppointmentDate(appointment.date)}`,
+    `Ora: ${appointment.time} (${appointment.durationMin} min)`,
+    `Serviciu: ${appointment.service}`,
+    `Pret: ${appointment.servicePrice}`,
+    `Copil: ${appointment.childName}`,
+    `Varsta: ${appointment.childAge || "-"}`,
+    "",
+    `Locatie: ${clinic.address}`,
+    `Harta: ${clinic.mapUrl}`,
+    `Telefon: ${clinic.phone}`,
+    "",
+    "Va rugam sa ajungeti cu cateva minute mai devreme. Daca apare o intarziere sau doriti modificarea programarii, ne puteti contacta telefonic.",
+    "",
+    "Cu drag,",
+    "Echipa Cardiopedi",
+  ].join("\n");
+}
+
+function patientConfirmationHtml(appointment: AppointmentEmailData) {
+  const rows = [
+    ["Data", formatAppointmentDate(appointment.date)],
+    ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
+    ["Serviciu", appointment.service],
+    ["Pret", appointment.servicePrice],
+    ["Copil", appointment.childName],
+    ["Varsta", appointment.childAge || "-"],
+    ["Locatie", clinic.address],
+    ["Telefon", clinic.phone],
+  ];
+
+  return `
+    <div style="margin:0;padding:24px;background:#f4faf8;font-family:Arial,Helvetica,sans-serif;color:#143047;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #d7e8ea;border-radius:12px;overflow:hidden;">
+        <tr>
+          <td style="padding:22px 24px;background:#143047;color:#ffffff;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#a8dfc2;">Cardiopedi</div>
+            <div style="font-size:24px;font-weight:800;line-height:1.2;margin-top:6px;">Am primit programarea dumneavoastra</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:22px 24px;">
+            <p style="margin:0 0 14px;color:#143047;font-size:16px;line-height:1.55;">
+              Buna ziua, ${escapeHtml(appointment.parentName)}.
+            </p>
+            <p style="margin:0 0 18px;color:#4e6a78;font-size:15px;line-height:1.65;">
+              Am primit cererea dumneavoastra de programare. Mai jos gasiti detaliile programarii si locatia cabinetului.
+            </p>
+            <div style="display:inline-block;background:#e9f8f0;color:#1f7660;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:800;margin-bottom:16px;">
+              ${escapeHtml(formatAppointmentDate(appointment.date))} · ${escapeHtml(appointment.time)}
+            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              ${rows.map(([label, value]) => `
+                <tr>
+                  <td style="width:108px;padding:10px 0;border-bottom:1px solid #e6f0f1;color:#5e7784;font-size:12px;font-weight:800;text-transform:uppercase;vertical-align:top;">${escapeHtml(label)}</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #e6f0f1;color:#143047;font-size:15px;font-weight:700;line-height:1.4;vertical-align:top;">${escapeHtml(value)}</td>
+                </tr>
+              `).join("")}
+            </table>
+            <p style="margin:20px 0 0;color:#4e6a78;font-size:15px;line-height:1.65;">
+              Va rugam sa ajungeti cu cateva minute mai devreme. Daca apare o intarziere sau doriti modificarea programarii, ne puteti contacta telefonic.
+            </p>
+            <div style="margin-top:22px;">
+              <a href="${escapeHtml(clinic.mapUrl)}" style="display:inline-block;background:#1f84ba;color:#ffffff;text-decoration:none;border-radius:8px;padding:13px 18px;font-size:15px;font-weight:800;">
+                Deschide locatia in Google Maps
+              </a>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+async function notifyNewAppointment(appointment: AppointmentEmailData) {
   await sendMail({
     html: appointmentNotificationHtml(appointment),
     subject: `Programare noua: ${appointment.childName} - ${appointment.date} ${appointment.time}`,
     text: appointmentNotificationText(appointment),
     to: APPOINTMENT_NOTIFICATION_EMAILS,
+  });
+}
+
+async function sendPatientConfirmation(appointment: AppointmentEmailData) {
+  if (!appointment.email) {
+    return;
+  }
+
+  await sendMail({
+    html: patientConfirmationHtml(appointment),
+    subject: `Programarea ta la Cardiopedi - ${appointment.date} ${appointment.time}`,
+    text: patientConfirmationText(appointment),
+    to: appointment.email,
   });
 }
 
@@ -190,15 +316,30 @@ export async function createAppointment(
   const email = textValue(formData, "email");
   const notes = textValue(formData, "notes");
 
-  if (!isDateValue(date) || !isTimeValue(time) || !service || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone)) {
+  if (!isDateValue(date) || !isTimeValue(time) || !service || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
     return {
       message: "Completeaza corect data, ora, serviciul si datele de contact.",
       status: "error",
     };
   }
 
-  const activeServices = await prisma.$queryRaw<Array<{ name: string }>>`
-    SELECT "name"
+  const activeServices = await prisma.$queryRaw<Array<{
+    currency: string;
+    discountEnabled: boolean;
+    discountEndsAt: Date | null;
+    discountPercent: number;
+    discountStartsAt: Date | null;
+    name: string;
+    priceCents: number;
+  }>>`
+    SELECT
+      "name",
+      "priceCents",
+      "currency",
+      "discountEnabled",
+      "discountPercent",
+      "discountStartsAt",
+      "discountEndsAt"
     FROM "MedicalService"
     WHERE "isPaused" = false AND "name" = ${service}
     LIMIT 1
@@ -288,21 +429,30 @@ export async function createAppointment(
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
 
+  const appointmentEmailData = {
+    childName,
+    childAge,
+    date,
+    durationMin: matchingScheduleSlot.durationMin,
+    email,
+    notes,
+    parentName,
+    phone,
+    service,
+    servicePrice: servicePriceLabel(activeServices[0]),
+    time,
+  };
+
   try {
-    await notifyNewAppointment({
-      childName,
-      childAge,
-      date,
-      durationMin: matchingScheduleSlot.durationMin,
-      email,
-      notes,
-      parentName,
-      phone,
-      service,
-      time,
-    });
+    await notifyNewAppointment(appointmentEmailData);
   } catch (error) {
     console.error("New appointment notification email error:", error);
+  }
+
+  try {
+    await sendPatientConfirmation(appointmentEmailData);
+  } catch (error) {
+    console.error("Patient appointment confirmation email error:", error);
   }
 
   return {

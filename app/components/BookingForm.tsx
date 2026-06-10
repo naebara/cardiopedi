@@ -404,7 +404,7 @@ export function BookingForm({
               <CheckCircle2 size={32} />
             </div>
             <h2 id="booking-confirmation-title">Cererea a fost trimisa</h2>
-            <p>{formState.message || "Cererea de programare a fost trimisa."}</p>
+            <p>Cererea de programare a fost trimisa. Vei primi confirmarea cu detaliile programarii pe email.</p>
             <button className={styles.primaryButton} onClick={() => setIsSuccessModalOpen(false)} type="button">
               Am inteles
             </button>

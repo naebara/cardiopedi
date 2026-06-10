@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { HeartPulse, MapPin, Menu, Phone } from "lucide-react";
+import { HeartPulse, MapPin, Menu, Phone, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import type { PublicScheduleSlot } from "@/lib/schedule";
 import { clinic } from "../site-data";
 import styles from "../public-site.module.css";
@@ -13,6 +16,16 @@ const navigation = [
 ];
 
 export function PublicHeader() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? "hidden" : "";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isMenuOpen]);
+
   return (
     <header className={styles.header}>
       <Link className={styles.logo} href="/">
@@ -35,9 +48,47 @@ export function PublicHeader() {
         Programare
       </Link>
 
-      <button className={styles.mobileMenu} aria-label="Meniu">
-        <Menu size={22} />
+      <button
+        aria-controls="mobile-navigation"
+        aria-expanded={isMenuOpen}
+        aria-label={isMenuOpen ? "Inchide meniul" : "Deschide meniul"}
+        className={styles.mobileMenu}
+        onClick={() => setIsMenuOpen((open) => !open)}
+        type="button"
+      >
+        {isMenuOpen ? <X size={22} /> : <Menu size={22} />}
       </button>
+
+      {isMenuOpen ? (
+        <div className={`${styles.mobileNavOverlay} ${styles.mobileNavOverlayOpen}`} id="mobile-navigation">
+          <nav aria-label="Navigatie principala mobila" className={styles.mobileNav}>
+            <div className={styles.mobileNavTop}>
+              <Link className={styles.logo} href="/" onClick={() => setIsMenuOpen(false)}>
+                <span className={styles.logoMark}><HeartPulse size={25} /></span>
+                <span>
+                  <strong>{clinic.name}</strong>
+                  <small>{clinic.tagline}</small>
+                </span>
+              </Link>
+              <button aria-label="Inchide meniul" className={styles.mobileNavClose} onClick={() => setIsMenuOpen(false)} type="button">
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className={styles.mobileNavLinks}>
+              {navigation.map((item) => (
+                <Link key={item.href} href={item.href} onClick={() => setIsMenuOpen(false)}>
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+
+            <Link className={styles.mobileNavCta} href="/programari" onClick={() => setIsMenuOpen(false)}>
+              Fa o programare
+            </Link>
+          </nav>
+        </div>
+      ) : null}
     </header>
   );
 }
@@ -69,7 +120,12 @@ export function PublicFooter({ schedule = [] }: { schedule?: PublicScheduleSlot[
 
       <div>
         <h3>Contact</h3>
-        <p><Phone size={16} /> {clinic.phone}</p>
+        <p>
+          <Phone size={16} />
+          <a className={styles.mapLink} href={clinic.phoneHref}>
+            {clinic.phone}
+          </a>
+        </p>
         <p>
           <MapPin size={16} />
           <a className={styles.mapLink} href={clinic.mapUrl} rel="noreferrer" target="_blank">

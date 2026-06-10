@@ -24,7 +24,12 @@ export default async function ContactPage() {
         </div>
 
         <div className={styles.contactPanel}>
-          <p><Phone size={18} /> {clinic.phone}</p>
+          <p>
+            <Phone size={18} />
+            <a className={styles.mapLink} href={clinic.phoneHref}>
+              {clinic.phone}
+            </a>
+          </p>
           <p><Mail size={18} /> {clinic.email}</p>
           <p>
             <MapPin size={18} />

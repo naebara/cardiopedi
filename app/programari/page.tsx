@@ -36,7 +36,12 @@ export default async function AppointmentsPage() {
           <p>Selecteaza data, ora si lasa datele de contact.</p>
         </div>
         <BookingForm
-          blockedDates={blockedDates.map((blockedDate) => blockedDate.date)}
+          blockedPeriods={blockedDates.map((blockedDate) => ({
+            date: blockedDate.date,
+            endDate: blockedDate.endDate,
+            endTime: blockedDate.endTime,
+            startTime: blockedDate.startTime,
+          }))}
           occupiedSlots={occupiedSlots}
           schedule={scheduleOptions}
           services={serviceOptions}

@@ -114,13 +114,17 @@ model ClinicScheduleSlot {
 }
 
 model ClinicBlockedDate {
-  id        String   @id @default(cuid())
-  date      DateTime @unique
+  id        String    @id @default(cuid())
+  date      DateTime  @unique
+  endDate   DateTime?
+  startTime String?
+  endTime   String?
   reason    String?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   createdBy String?
 
   @@index([date])
+  @@index([endDate])
 }
 
 enum AppointmentStatus {

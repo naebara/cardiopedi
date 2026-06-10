@@ -359,7 +359,13 @@ export async function createAppointment(
   const blockedDate = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT "id"
     FROM "ClinicBlockedDate"
-    WHERE "date" = ${dateFromValue(date)}
+    WHERE ${dateFromValue(date)} BETWEEN "date" AND COALESCE("endDate", "date")
+      AND (
+        "startTime" IS NULL
+        OR "endTime" IS NULL
+        OR "date" <> COALESCE("endDate", "date")
+        OR (${time} >= "startTime" AND ${time} < "endTime")
+      )
     LIMIT 1
   `;
 

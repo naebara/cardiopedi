@@ -20,6 +20,9 @@ export type PublicScheduleSlot = ClinicScheduleSlot & {
 export type ClinicBlockedDate = {
   id: string;
   date: Date;
+  endDate: Date | null;
+  startTime: string | null;
+  endTime: string | null;
   reason: string | null;
   createdAt: Date;
   createdBy: string | null;
@@ -28,7 +31,12 @@ export type ClinicBlockedDate = {
 export type PublicBlockedDate = {
   id: string;
   date: string;
+  endDate: string;
   dateLabel: string;
+  endDateLabel: string;
+  intervalLabel: string;
+  startTime: string | null;
+  endTime: string | null;
   reason: string | null;
 };
 
@@ -78,11 +86,19 @@ export function formatScheduleDate(value: string | Date) {
 
 function blockedDateWithDisplay(row: ClinicBlockedDate): PublicBlockedDate {
   const date = dateKey(row.date);
+  const endDate = dateKey(row.endDate ?? row.date);
+  const isRange = date !== endDate;
+  const intervalLabel = row.startTime && row.endTime ? `${row.startTime} - ${row.endTime}` : "Toata ziua";
 
   return {
     date,
+    endDate,
     dateLabel: formatScheduleDate(date),
+    endDateLabel: formatScheduleDate(endDate),
     id: row.id,
+    intervalLabel: isRange ? "Toata ziua" : intervalLabel,
+    startTime: isRange ? null : row.startTime,
+    endTime: isRange ? null : row.endTime,
     reason: row.reason,
   };
 }
@@ -126,9 +142,9 @@ export async function getPublicScheduleSlots() {
 
 export async function getAdminBlockedDates() {
   const rows = await prisma.$queryRaw<ClinicBlockedDate[]>`
-    SELECT "id", "date", "reason", "createdAt", "createdBy"
+    SELECT "id", "date", "endDate", "startTime", "endTime", "reason", "createdAt", "createdBy"
     FROM "ClinicBlockedDate"
-    WHERE "date" >= CURRENT_DATE
+    WHERE COALESCE("endDate", "date") >= CURRENT_DATE
     ORDER BY "date" ASC
   `;
 
@@ -137,9 +153,9 @@ export async function getAdminBlockedDates() {
 
 export async function getPublicBlockedDates() {
   const rows = await prisma.$queryRaw<ClinicBlockedDate[]>`
-    SELECT "id", "date", "reason", "createdAt", "createdBy"
+    SELECT "id", "date", "endDate", "startTime", "endTime", "reason", "createdAt", "createdBy"
     FROM "ClinicBlockedDate"
-    WHERE "date" >= CURRENT_DATE
+    WHERE COALESCE("endDate", "date") >= CURRENT_DATE
     ORDER BY "date" ASC
   `;
 
@@ -147,17 +163,34 @@ export async function getPublicBlockedDates() {
 }
 
 export async function getActiveAppointmentCountsByDate() {
-  const rows = await prisma.$queryRaw<Array<{ count: bigint; date: Date }>>`
-    SELECT "date", COUNT(*) AS "count"
+  const rows = await prisma.$queryRaw<Array<{ date: Date; time: string }>>`
+    SELECT "date", "time"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
       AND "date" >= CURRENT_DATE
-    GROUP BY "date"
     ORDER BY "date" ASC
   `;
 
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const key = dateKey(row.date);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return Array.from(counts, ([date, count]) => ({ count, date })) satisfies AppointmentCountByDate[];
+}
+
+export async function getActiveAppointmentSlotsForBlocking() {
+  const rows = await prisma.$queryRaw<Array<{ date: Date; time: string }>>`
+    SELECT "date", "time"
+    FROM "Appointment"
+    WHERE "status" <> 'CANCELLED'
+      AND "date" >= CURRENT_DATE
+    ORDER BY "date" ASC, "time" ASC
+  `;
+
   return rows.map((row) => ({
-    count: Number(row.count),
     date: dateKey(row.date),
-  })) satisfies AppointmentCountByDate[];
+    time: row.time,
+  }));
 }

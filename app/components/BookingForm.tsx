@@ -64,6 +64,27 @@ type OccupiedSlot = {
   time: string;
 };
 
+type BlockedPeriod = {
+  date: string;
+  endDate: string;
+  startTime: string | null;
+  endTime: string | null;
+};
+
+function isSlotBlocked(periods: BlockedPeriod[], date: string, time: string) {
+  return periods.some((period) => {
+    if (date < period.date || date > period.endDate) {
+      return false;
+    }
+
+    if (!period.startTime || !period.endTime || period.date !== period.endDate) {
+      return true;
+    }
+
+    return time >= period.startTime && time < period.endTime;
+  });
+}
+
 const initialState: AppointmentFormState = {
   message: "",
   status: "idle",
@@ -94,12 +115,12 @@ function SubmitButton({
 }
 
 export function BookingForm({
-  blockedDates,
+  blockedPeriods,
   occupiedSlots,
   schedule,
   services,
 }: {
-  blockedDates: string[];
+  blockedPeriods: BlockedPeriod[];
   occupiedSlots: OccupiedSlot[];
   schedule: BookingScheduleOption[];
   services: BookingServiceOption[];
@@ -109,7 +130,6 @@ export function BookingForm({
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const occupiedSlotValues = useMemo(() => new Set(occupiedSlots.map((slot) => `${slot.date}|${slot.time}`)), [occupiedSlots]);
-  const blockedDateValues = useMemo(() => new Set(blockedDates), [blockedDates]);
   const scheduleByWeekday = useMemo(() => {
     return schedule.reduce<Record<number, BookingScheduleOption[]>>((acc, slot) => {
       acc[slot.dayOfWeek] = [...(acc[slot.dayOfWeek] ?? []), slot];
@@ -125,16 +145,16 @@ export function BookingForm({
       const date = new Date(today);
       date.setDate(today.getDate() + offset);
 
+      const value = dateValue(date);
       const daySlots = (scheduleByWeekday[date.getDay()] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin));
-      if (blockedDateValues.has(dateValue(date))) {
-        continue;
-      }
 
-      const freeSlots = daySlots.filter((slot) => !occupiedSlotValues.has(`${dateValue(date)}|${slot}`));
+      const freeSlots = daySlots.filter((slot) => {
+        return !occupiedSlotValues.has(`${value}|${slot}`) && !isSlotBlocked(blockedPeriods, value, slot);
+      });
 
       if (freeSlots.length) {
         dates.push({
-          value: dateValue(date),
+          value,
           label: labelDate(date),
           weekday: date.getDay(),
         });
@@ -142,7 +162,7 @@ export function BookingForm({
     }
 
     return dates;
-  }, [blockedDateValues, occupiedSlotValues, scheduleByWeekday]);
+  }, [blockedPeriods, occupiedSlotValues, scheduleByWeekday]);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [phone, setPhone] = useState("");
@@ -155,7 +175,7 @@ export function BookingForm({
   const selectedDateMeta = availableDates.find((date) => date.value === selectedDate);
   const slots = selectedDateMeta
     ? (scheduleByWeekday[selectedDateMeta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
-      .filter((slot) => !occupiedSlotValues.has(`${selectedDateMeta.value}|${slot}`))
+      .filter((slot) => !occupiedSlotValues.has(`${selectedDateMeta.value}|${slot}`) && !isSlotBlocked(blockedPeriods, selectedDateMeta.value, slot))
     : [];
   const [selectedTime, setSelectedTime] = useState("");
 
@@ -179,7 +199,7 @@ export function BookingForm({
     const meta = availableDates.find((date) => date.value === value);
     const nextSlots = meta
       ? (scheduleByWeekday[meta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
-        .filter((slot) => !occupiedSlotValues.has(`${meta.value}|${slot}`))
+        .filter((slot) => !occupiedSlotValues.has(`${meta.value}|${slot}`) && !isSlotBlocked(blockedPeriods, meta.value, slot))
       : [];
     setSelectedTime(nextSlots[0] ?? "");
   }

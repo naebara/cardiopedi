@@ -41,12 +41,17 @@ export type ScheduleSlotRow = {
 export type BlockedDateRow = {
   id: string;
   date: string;
+  endDate: string;
   dateLabel: string;
+  endDateLabel: string;
+  intervalLabel: string;
+  startTime: string | null;
+  endTime: string | null;
   reason: string | null;
 };
 
 type ScheduleSettingsTableProps = {
-  appointmentCountsByDate: Array<{ count: number; date: string }>;
+  appointmentSlotsForBlocking: Array<{ date: string; time: string }>;
   blockedDates: BlockedDateRow[];
   dayOptions: DayOption[];
   slots: ScheduleSlotRow[];
@@ -100,6 +105,27 @@ function weekdayFromDateValue(value: string) {
   }
 
   return new Date(`${value}T12:00:00.000Z`).getUTCDay();
+}
+
+function nextDateValue(value: string) {
+  const date = new Date(`${value}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function dateRangeIncludesWorkingDay(startDate: string, endDate: string, activeScheduleDays: Set<number>) {
+  if (!startDate || !endDate || endDate < startDate) {
+    return false;
+  }
+
+  for (let date = startDate; date <= endDate; date = nextDateValue(date)) {
+    const weekday = weekdayFromDateValue(date);
+    if (weekday !== null && activeScheduleDays.has(weekday)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function ScheduleFields({
@@ -276,20 +302,38 @@ function BlockDateSubmitButton() {
 
   return (
     <button aria-busy={pending} className={styles.btnPrimary} disabled={pending} type="submit">
-      {pending ? "Se blocheaza..." : "Blocheaza ziua"}
+      {pending ? "Se salveaza..." : "Planifica timp liber"}
     </button>
   );
 }
 
-export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, dayOptions, slots }: ScheduleSettingsTableProps) {
+export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDates, dayOptions, slots }: ScheduleSettingsTableProps) {
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [selectedBlockDate, setSelectedBlockDate] = useState("");
+  const [selectedBlockEndDate, setSelectedBlockEndDate] = useState("");
+  const [isRangeBlock, setIsRangeBlock] = useState(false);
+  const [isPartialDayBlock, setIsPartialDayBlock] = useState(false);
+  const [selectedBlockStartTime, setSelectedBlockStartTime] = useState("");
+  const [selectedBlockEndTime, setSelectedBlockEndTime] = useState("");
   const [validationError, setValidationError] = useState("");
-  const selectedBlockDateAppointmentCount = appointmentCountsByDate.find((item) => item.date === selectedBlockDate)?.count ?? 0;
   const activeScheduleDays = useMemo(() => new Set(slots.filter((slot) => !slot.isPaused).map((slot) => slot.dayOfWeek)), [slots]);
   const selectedBlockDateWeekday = weekdayFromDateValue(selectedBlockDate);
-  const isSelectedBlockDateOutsideSchedule = Boolean(selectedBlockDate && selectedBlockDateWeekday !== null && !activeScheduleDays.has(selectedBlockDateWeekday));
+  const effectiveEndDate = isRangeBlock ? selectedBlockEndDate : selectedBlockDate;
+  const selectedBlockDateAppointmentCount = appointmentSlotsForBlocking.filter((appointment) => {
+    if (!selectedBlockDate || !effectiveEndDate || appointment.date < selectedBlockDate || appointment.date > effectiveEndDate) {
+      return false;
+    }
+
+    if (isPartialDayBlock && !isRangeBlock && selectedBlockStartTime && selectedBlockEndTime) {
+      return appointment.time >= selectedBlockStartTime && appointment.time < selectedBlockEndTime;
+    }
+
+    return true;
+  }).length;
+  const isSelectedBlockDateOutsideSchedule = isRangeBlock
+    ? Boolean(selectedBlockDate && selectedBlockEndDate && !dateRangeIncludesWorkingDay(selectedBlockDate, selectedBlockEndDate, activeScheduleDays))
+    : Boolean(selectedBlockDate && selectedBlockDateWeekday !== null && !activeScheduleDays.has(selectedBlockDateWeekday));
 
   const activeCount = useMemo(() => slots.filter((slot) => !slot.isPaused).length, [slots]);
   const pausedCount = slots.length - activeCount;
@@ -311,6 +355,11 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
 
   function closeModal() {
     setSelectedBlockDate("");
+    setSelectedBlockEndDate("");
+    setIsRangeBlock(false);
+    setIsPartialDayBlock(false);
+    setSelectedBlockStartTime("");
+    setSelectedBlockEndTime("");
     setValidationError("");
     setActiveModal(null);
   }
@@ -364,10 +413,21 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
 
   async function handleBlockDate(formData: FormData) {
     const date = String(formData.get("date") ?? "");
+    const endDate = String(formData.get("endDate") ?? date);
     const dayOfWeek = weekdayFromDateValue(date);
 
-    if (dayOfWeek === null || !activeScheduleDays.has(dayOfWeek)) {
+    if (isRangeBlock) {
+      if (!dateRangeIncludesWorkingDay(date, endDate, activeScheduleDays)) {
+        setValidationError("Intervalul selectat nu include nicio zi din programul de lucru al cabinetului.");
+        return;
+      }
+    } else if (dayOfWeek === null || !activeScheduleDays.has(dayOfWeek)) {
       setValidationError("Ziua selectata oricum nu este in programul de lucru al cabinetului.");
+      return;
+    }
+
+    if (!isRangeBlock && isPartialDayBlock && (!selectedBlockStartTime || !selectedBlockEndTime || selectedBlockStartTime >= selectedBlockEndTime)) {
+      setValidationError("Alege un interval orar valid pentru blocarea partiala.");
       return;
     }
 
@@ -378,6 +438,7 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
     }
 
     setValidationError("");
+    setSelectedBlockDate("");
     setActiveModal(null);
     router.refresh();
   }
@@ -395,7 +456,7 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
       : activeModal?.type === "edit"
         ? "Editeaza interval"
         : activeModal?.type === "block-date"
-          ? "Blocheaza zi"
+          ? "Planifica timp liber"
           : activeModal?.type === "delete-blocked-date"
             ? "Deblocheaza zi"
             : "Sterge interval";
@@ -419,18 +480,6 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
         >
           <Plus size={18} />
           Adauga interval
-        </button>
-        <button
-          className={styles.secondaryButton}
-          onClick={() => {
-            setValidationError("");
-            setSelectedBlockDate("");
-            setActiveModal({ type: "block-date" });
-          }}
-          type="button"
-        >
-          <CalendarX2 size={18} />
-          Blocheaza zi
         </button>
       </header>
 
@@ -574,27 +623,32 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
       <section className={styles.panel}>
         <div className={styles.panelHead}>
           <div>
-            <h2>Zile blocate</h2>
-            <p>Zilele blocate nu mai apar pe site pentru programari noi.</p>
+            <h2>Timp liber planificat</h2>
+            <p>Zilele si intervalele planificate aici nu mai apar pe site pentru programari noi.</p>
           </div>
           <button
             className={styles.addButton}
             onClick={() => {
               setValidationError("");
               setSelectedBlockDate("");
+              setSelectedBlockEndDate("");
+              setIsRangeBlock(false);
+              setIsPartialDayBlock(false);
+              setSelectedBlockStartTime("");
+              setSelectedBlockEndTime("");
               setActiveModal({ type: "block-date" });
             }}
             type="button"
           >
             <CalendarX2 size={18} />
-            Blocheaza zi
+            Planifica timp liber
           </button>
         </div>
 
         {blockedDates.length === 0 ? (
           <div className={styles.compactEmpty}>
             <CalendarX2 size={24} />
-            <span>Nu exista zile blocate in perioada urmatoare.</span>
+            <span>Nu exista timp liber planificat in perioada urmatoare.</span>
           </div>
         ) : (
           <div className={styles.blockedGrid}>
@@ -604,8 +658,16 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
                   <CalendarX2 size={18} />
                 </div>
                 <div className={styles.blockedText}>
-                  <strong>{blockedDate.dateLabel}</strong>
-                  <span>{blockedDate.reason || "Fara motiv adaugat"}</span>
+                  <strong>
+                    {blockedDate.date !== blockedDate.endDate
+                      ? `${blockedDate.dateLabel} - ${blockedDate.endDateLabel}`
+                      : blockedDate.dateLabel}
+                  </strong>
+                  <span>
+                    {blockedDate.date !== blockedDate.endDate
+                      ? blockedDate.reason || "Fara motiv adaugat"
+                      : `${blockedDate.intervalLabel} · ${blockedDate.reason || "Fara motiv adaugat"}`}
+                  </span>
                 </div>
                 <button
                   aria-label={`Deblocheaza ${blockedDate.dateLabel}`}
@@ -655,9 +717,9 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
                     ? "Alege ziua, intervalul orar si durata fiecarui slot."
                     : activeModal.type === "edit" || activeModal.type === "delete"
                       ? `${activeModal.slot.dayLabel} · ${activeModal.slot.interval}`
-                      : activeModal.type === "delete-blocked-date"
-                        ? activeModal.blockedDate.dateLabel
-                        : "Alege data si motivul blocarii."}
+                    : activeModal.type === "delete-blocked-date"
+                      ? activeModal.blockedDate.dateLabel
+                      : "Alege perioada, intervalul si motivul."}
                 </p>
               </div>
               <button aria-label="Inchide" className={styles.closeBtn} onClick={closeModal} type="button">
@@ -715,25 +777,125 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
                 <div className={styles.form}>
                   <div className={styles.section}>
                     <span className={styles.sectionLabel}>
-                      <CalendarX2 size={14} /> Zi indisponibila
+                      <CalendarX2 size={14} /> Timp liber
                     </span>
+                    <div className={styles.segmentedControl} role="group" aria-label="Tip blocare">
+                      <button
+                        aria-pressed={!isRangeBlock}
+                        className={!isRangeBlock ? styles.segmentActive : ""}
+                        onClick={() => {
+                          setIsRangeBlock(false);
+                          setSelectedBlockEndDate("");
+                        }}
+                        type="button"
+                      >
+                        O zi
+                      </button>
+                      <button
+                        aria-pressed={isRangeBlock}
+                        className={isRangeBlock ? styles.segmentActive : ""}
+                        onClick={() => {
+                          setIsRangeBlock(true);
+                          setIsPartialDayBlock(false);
+                          setSelectedBlockStartTime("");
+                          setSelectedBlockEndTime("");
+                          setSelectedBlockEndDate(selectedBlockDate);
+                        }}
+                        type="button"
+                      >
+                        Interval de date
+                      </button>
+                    </div>
                     <label className={styles.field}>
-                      <span>Data</span>
+                      <span>{isRangeBlock ? "De la data" : "Data"}</span>
                       <input
                         className={styles.input}
                         min={new Date().toISOString().slice(0, 10)}
                         name="date"
-                        onChange={(event) => setSelectedBlockDate(event.target.value)}
+                        onChange={(event) => {
+                          setSelectedBlockDate(event.target.value);
+                          if (isRangeBlock && (!selectedBlockEndDate || selectedBlockEndDate < event.target.value)) {
+                            setSelectedBlockEndDate(event.target.value);
+                          }
+                        }}
                         required
                         type="date"
+                        value={selectedBlockDate}
                       />
                     </label>
+                    <input name="blockMode" type="hidden" value={isRangeBlock ? "range" : "single"} />
+                    {isRangeBlock ? (
+                      <label className={styles.field}>
+                        <span>Pana la data</span>
+                        <input
+                          className={styles.input}
+                          min={selectedBlockDate || new Date().toISOString().slice(0, 10)}
+                          name="endDate"
+                          onChange={(event) => setSelectedBlockEndDate(event.target.value)}
+                          required
+                          type="date"
+                          value={selectedBlockEndDate}
+                        />
+                      </label>
+                    ) : (
+                      <input name="endDate" type="hidden" value={selectedBlockDate} />
+                    )}
+                    {!isRangeBlock ? (
+                      <>
+                        <label className={styles.toggle}>
+                          <input
+                            className={styles.toggleInput}
+                            checked={isPartialDayBlock}
+                            name="isPartialDay"
+                            onChange={(event) => {
+                              setIsPartialDayBlock(event.target.checked);
+                              if (!event.target.checked) {
+                                setSelectedBlockStartTime("");
+                                setSelectedBlockEndTime("");
+                              }
+                            }}
+                            type="checkbox"
+                          />
+                          <span className={styles.toggleTrack} aria-hidden="true" />
+                          <span className={styles.toggleText}>
+                            <strong>Blocheaza doar o parte din program</strong>
+                            <span>Implicit se blocheaza toata ziua.</span>
+                          </span>
+                        </label>
+                        {isPartialDayBlock ? (
+                          <div className={styles.fieldGrid2}>
+                            <label className={styles.field}>
+                              <span>De la ora</span>
+                              <input
+                                className={styles.input}
+                                name="startTime"
+                                onChange={(event) => setSelectedBlockStartTime(event.target.value)}
+                                required
+                                type="time"
+                                value={selectedBlockStartTime}
+                              />
+                            </label>
+                            <label className={styles.field}>
+                              <span>Pana la ora</span>
+                              <input
+                                className={styles.input}
+                                name="endTime"
+                                onChange={(event) => setSelectedBlockEndTime(event.target.value)}
+                                required
+                                type="time"
+                                value={selectedBlockEndTime}
+                              />
+                            </label>
+                          </div>
+                        ) : null}
+                      </>
+                    ) : null}
                     {selectedBlockDateAppointmentCount ? (
                       <div className={styles.appointmentWarning} role="alert">
                         <AlertTriangle size={18} />
                         <div>
                           <strong>
-                            In aceasta zi {selectedBlockDateAppointmentCount === 1 ? "exista deja o programare" : `exista deja ${selectedBlockDateAppointmentCount} programari`}.
+                            In {isRangeBlock ? "perioada selectata" : "aceasta zi"} {selectedBlockDateAppointmentCount === 1 ? "exista deja o programare" : `exista deja ${selectedBlockDateAppointmentCount} programari`}.
                           </strong>
                           <span>Dupa blocare, vei primi pe email detaliile de contact ca sa anunti pacientii si sa stabiliti reprogramarea.</span>
                         </div>
@@ -744,7 +906,7 @@ export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, d
                         <CalendarDays size={18} />
                         <div>
                           <strong>Ziua selectata nu este in programul de lucru al cabinetului.</strong>
-                          <span>Nu este nevoie sa o blochezi: pacientii oricum nu pot face programari in acea zi.</span>
+                          <span>{isRangeBlock ? "Intervalul nu include zile in care pacientii pot face programari." : "Nu este nevoie sa o blochezi: pacientii oricum nu pot face programari in acea zi."}</span>
                         </div>
                       </div>
                     ) : null}

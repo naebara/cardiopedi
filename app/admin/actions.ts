@@ -652,9 +652,9 @@ function blockedDateNotificationText({
   const periodLabel = blockedPeriodLabel(date, endDate, startTime, endTime);
 
   return [
-    `Ai blocat ${periodLabel} pentru motivul: ${reasonLabel}.`,
+    `Ai planificat timp liber in ${periodLabel} pentru motivul: ${reasonLabel}.`,
     "",
-    "In perioada blocata ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi:",
+    "In perioada respectiva ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi:",
     "",
     ...appointments.map((appointment) => {
       return [
@@ -695,7 +695,7 @@ function blockedDateNotificationHtml({
         <tr>
           <td style="padding:20px 22px;background:#8a2525;color:#ffffff;">
             <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffd6d2;">Cardiopedi</div>
-            <div style="font-size:22px;font-weight:800;line-height:1.2;margin-top:6px;">Ai blocat program cu programari</div>
+            <div style="font-size:22px;font-weight:800;line-height:1.2;margin-top:6px;">Ai planificat timp liber cu programari existente</div>
           </td>
         </tr>
         <tr>
@@ -704,8 +704,8 @@ function blockedDateNotificationHtml({
               ${escapeHtml(periodLabel)}
             </div>
             <p style="margin:0 0 16px;color:#4e6a78;font-size:15px;line-height:1.6;">
-              Ai blocat ${escapeHtml(periodLabel)} pentru motivul: <strong>${escapeHtml(reasonLabel)}</strong>.
-              In perioada blocata ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi.
+              Ai planificat timp liber in ${escapeHtml(periodLabel)} pentru motivul: <strong>${escapeHtml(reasonLabel)}</strong>.
+              In perioada respectiva ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi.
             </p>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
               <tr>
@@ -760,7 +760,7 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
 
   if (hasPartialTime && (!isTimeValue(startTime) || !isTimeValue(endTime) || startTime >= endTime)) {
     return {
-      message: "Alege un interval orar valid pentru blocarea partiala.",
+      message: "Alege un interval orar valid pentru timpul liber partial.",
       status: "error",
     };
   }
@@ -835,7 +835,7 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
       if (recipients.length > 0) {
         await sendMail({
           html: blockedDateNotificationHtml({ appointments: existingAppointments, date, endDate, endTime: hasPartialTime ? endTime : undefined, reason, startTime: hasPartialTime ? startTime : undefined }),
-          subject: `Ai blocat ${date === endDate ? date : `${date} - ${endDate}`}: programari de anuntat`,
+          subject: `Timp liber planificat ${date === endDate ? date : `${date} - ${endDate}`}: programari de anuntat`,
           text: blockedDateNotificationText({ appointments: existingAppointments, date, endDate, endTime: hasPartialTime ? endTime : undefined, reason, startTime: hasPartialTime ? startTime : undefined }),
           to: recipients,
         });
@@ -851,8 +851,8 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
 
   return {
     message: existingAppointments.length > 0
-      ? `Ziua a fost blocata. Exista ${existingAppointments.length} programari active pentru reprogramare.`
-      : "Ziua a fost blocata.",
+      ? `Timpul liber a fost planificat. Exista ${existingAppointments.length} programari active pentru reprogramare.`
+      : "Timpul liber a fost planificat.",
     status: "success",
   };
 }
@@ -952,7 +952,7 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
   `;
 
   if (blockedDate[0] && !allowOutsideSchedule) {
-    return { message: "Ziua aleasa este blocata in programul cabinetului.", status: "error" as const };
+    return { message: "Perioada aleasa nu este disponibila in programul cabinetului.", status: "error" as const };
   }
 
   const scheduleSlots = await prisma.$queryRaw<Array<{ startTime: string; endTime: string; durationMin: number }>>`

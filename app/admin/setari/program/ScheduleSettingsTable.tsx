@@ -427,7 +427,7 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
     }
 
     if (!isRangeBlock && isPartialDayBlock && (!selectedBlockStartTime || !selectedBlockEndTime || selectedBlockStartTime >= selectedBlockEndTime)) {
-      setValidationError("Alege un interval orar valid pentru blocarea partiala.");
+      setValidationError("Alege un interval orar valid pentru timpul liber partial.");
       return;
     }
 
@@ -754,7 +754,7 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
                 <div className={styles.form}>
                   <input name="blockedDateId" type="hidden" value={activeModal.blockedDate.id} />
                   <div className={styles.confirm}>
-                    <strong>Confirmi deblocarea acestei zile?</strong>
+                    <strong>Confirmi eliminarea acestui timp liber?</strong>
                     <span>Ziua va redeveni disponibila pentru programari daca exista intervale active in programul saptamanal.</span>
                     <div className={styles.confirmSlot}>
                       <CalendarX2 size={16} color="#b83b35" />
@@ -779,7 +779,7 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
                     <span className={styles.sectionLabel}>
                       <CalendarX2 size={14} /> Timp liber
                     </span>
-                    <div className={styles.segmentedControl} role="group" aria-label="Tip blocare">
+                    <div className={styles.segmentedControl} role="group" aria-label="Tip timp liber">
                       <button
                         aria-pressed={!isRangeBlock}
                         className={!isRangeBlock ? styles.segmentActive : ""}
@@ -858,8 +858,8 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
                           />
                           <span className={styles.toggleTrack} aria-hidden="true" />
                           <span className={styles.toggleText}>
-                            <strong>Blocheaza doar o parte din program</strong>
-                            <span>Implicit se blocheaza toata ziua.</span>
+                            <strong>Planifica doar o parte din program</strong>
+                            <span>Implicit se planifica toata ziua ca timp liber.</span>
                           </span>
                         </label>
                         {isPartialDayBlock ? (
@@ -897,7 +897,7 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
                           <strong>
                             In {isRangeBlock ? "perioada selectata" : "aceasta zi"} {selectedBlockDateAppointmentCount === 1 ? "exista deja o programare" : `exista deja ${selectedBlockDateAppointmentCount} programari`}.
                           </strong>
-                          <span>Dupa blocare, vei primi pe email detaliile de contact ca sa anunti pacientii si sa stabiliti reprogramarea.</span>
+                          <span>Dupa salvare, vei primi pe email detaliile de contact ca sa anunti pacientii si sa stabiliti reprogramarea.</span>
                         </div>
                       </div>
                     ) : null}
@@ -906,7 +906,7 @@ export function ScheduleSettingsTable({ appointmentSlotsForBlocking, blockedDate
                         <CalendarDays size={18} />
                         <div>
                           <strong>Ziua selectata nu este in programul de lucru al cabinetului.</strong>
-                          <span>{isRangeBlock ? "Intervalul nu include zile in care pacientii pot face programari." : "Nu este nevoie sa o blochezi: pacientii oricum nu pot face programari in acea zi."}</span>
+                          <span>{isRangeBlock ? "Intervalul nu include zile in care pacientii pot face programari." : "Nu este nevoie sa planifici timp liber aici: pacientii oricum nu pot face programari in acea zi."}</span>
                         </div>
                       </div>
                     ) : null}

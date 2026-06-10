@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { ADMIN_FEATURES, getCurrentAdminUser, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
+import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import { formatScheduleDate } from "@/lib/schedule";
 
 export type CreateAdminUserState = {
   message: string;
@@ -17,6 +19,11 @@ export type AccountPasswordState = {
 };
 
 export type SoftDeletePatientState = {
+  message: string;
+  status: "error" | "idle" | "success";
+};
+
+export type BlockScheduleDateState = {
   message: string;
   status: "error" | "idle" | "success";
 };
@@ -38,6 +45,26 @@ const accountPasswordSchema = z.object({
 
 function normalizedPatientName(value: string) {
   return value.trim().toLocaleLowerCase("ro-RO");
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+async function getBlockedDateNotificationRecipients() {
+  const rows = await prisma.$queryRaw<Array<{ email: string }>>`
+    SELECT "email"
+    FROM "User"
+    WHERE "receivesBlockedDateEmails" = true
+    ORDER BY "createdAt" ASC
+  `;
+
+  return rows.map((row) => row.email).filter(Boolean);
 }
 
 export async function updateOwnPassword(_prevState: AccountPasswordState, formData: FormData): Promise<AccountPasswordState> {
@@ -109,6 +136,8 @@ export async function createAdminUser(_prevState: CreateAdminUserState, formData
   const { name, password } = result.data;
   const email = result.data.email.toLowerCase();
   const isMasterUser = formData.get("isMasterUser") === "on";
+  const receivesAppointmentEmails = formData.get("receivesAppointmentEmails") === "on";
+  const receivesBlockedDateEmails = formData.get("receivesBlockedDateEmails") === "on";
   const grantedFeatures = formData
     .getAll("features")
     .map(String)
@@ -133,6 +162,8 @@ export async function createAdminUser(_prevState: CreateAdminUserState, formData
         isMasterUser,
         name: name || null,
         password: hashedPassword,
+        receivesAppointmentEmails,
+        receivesBlockedDateEmails,
       },
     });
 
@@ -168,6 +199,8 @@ export async function updateUserAccess(formData: FormData) {
   }
 
   const isMasterUser = formData.get("isMasterUser") === "on";
+  const receivesAppointmentEmails = formData.get("receivesAppointmentEmails") === "on";
+  const receivesBlockedDateEmails = formData.get("receivesBlockedDateEmails") === "on";
   const grantedFeatures = formData
     .getAll("features")
     .map(String)
@@ -175,7 +208,10 @@ export async function updateUserAccess(formData: FormData) {
 
   await prisma.$executeRaw`
     UPDATE "User"
-    SET "isMasterUser" = ${userId === currentUser.id ? true : isMasterUser}
+    SET
+      "isMasterUser" = ${userId === currentUser.id ? true : isMasterUser},
+      "receivesAppointmentEmails" = ${receivesAppointmentEmails},
+      "receivesBlockedDateEmails" = ${receivesBlockedDateEmails}
     WHERE "id" = ${userId}
   `;
 
@@ -560,6 +596,223 @@ export async function deleteScheduleSlot(formData: FormData) {
   revalidatePath("/admin/setari/program");
 }
 
+function blockedDateFromValue(value: string) {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+type BlockedDateAppointmentEmailRow = {
+  childAge: string | null;
+  childName: string;
+  email: string | null;
+  notes: string | null;
+  parentName: string;
+  phone: string;
+  service: string;
+  status: string;
+  time: string;
+};
+
+function appointmentStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    CANCELLED: "Cancelata",
+    COMPLETED: "Finalizata",
+    CONFIRMED: "Confirmata",
+    NEW: "Noua",
+  };
+
+  return labels[status] ?? status;
+}
+
+function blockedDateNotificationText({
+  appointments,
+  date,
+  reason,
+}: {
+  appointments: BlockedDateAppointmentEmailRow[];
+  date: string;
+  reason: string;
+}) {
+  const reasonLabel = reason || "-";
+
+  return [
+    `Ai blocat ziua ${formatScheduleDate(date)} pentru motivul: ${reasonLabel}.`,
+    "",
+    "In acea zi ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi:",
+    "",
+    ...appointments.map((appointment) => {
+      return [
+        `${appointment.time} - ${appointment.service}`,
+        `Copil: ${appointment.childName}${appointment.childAge ? ` (${appointment.childAge})` : ""}`,
+        `Parinte: ${appointment.parentName}`,
+        `Telefon: ${appointment.phone}`,
+        `Email: ${appointment.email || "-"}`,
+        `Status: ${appointmentStatusLabel(appointment.status)}`,
+        `Motiv: ${appointment.notes || "-"}`,
+      ].join(" | ");
+    }),
+  ].join("\n");
+}
+
+function blockedDateNotificationHtml({
+  appointments,
+  date,
+  reason,
+}: {
+  appointments: BlockedDateAppointmentEmailRow[];
+  date: string;
+  reason: string;
+}) {
+  const reasonLabel = reason || "-";
+
+  return `
+    <div style="margin:0;padding:24px;background:#f4faf8;font-family:Arial,Helvetica,sans-serif;color:#143047;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #d7e8ea;border-radius:12px;overflow:hidden;">
+        <tr>
+          <td style="padding:20px 22px;background:#8a2525;color:#ffffff;">
+            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ffd6d2;">Cardiopedi</div>
+            <div style="font-size:22px;font-weight:800;line-height:1.2;margin-top:6px;">Ai blocat o zi cu programari</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:20px 22px;">
+            <div style="display:inline-block;background:#fdf1f0;color:#9a2a2a;border-radius:8px;padding:8px 10px;font-size:14px;font-weight:800;margin-bottom:12px;">
+              ${escapeHtml(formatScheduleDate(date))}
+            </div>
+            <p style="margin:0 0 16px;color:#4e6a78;font-size:15px;line-height:1.6;">
+              Ai blocat ziua ${escapeHtml(formatScheduleDate(date))} pentru motivul: <strong>${escapeHtml(reasonLabel)}</strong>.
+              In acea zi ai urmatoarele programari. Suna pacientii ca sa ii anunti si sa ii reprogramezi.
+            </p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:13px;">
+              <tr>
+                <th align="left" style="padding:8px 6px;border-bottom:2px solid #d7e8ea;color:#5e7784;font-size:11px;text-transform:uppercase;">Ora</th>
+                <th align="left" style="padding:8px 6px;border-bottom:2px solid #d7e8ea;color:#5e7784;font-size:11px;text-transform:uppercase;">Programare</th>
+                <th align="left" style="padding:8px 6px;border-bottom:2px solid #d7e8ea;color:#5e7784;font-size:11px;text-transform:uppercase;">Contact</th>
+                <th align="left" style="padding:8px 6px;border-bottom:2px solid #d7e8ea;color:#5e7784;font-size:11px;text-transform:uppercase;">Note</th>
+              </tr>
+              ${appointments.map((appointment) => `
+                <tr>
+                  <td style="width:54px;padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#143047;font-size:14px;font-weight:800;vertical-align:top;">${escapeHtml(appointment.time)}</td>
+                  <td style="padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#143047;line-height:1.35;vertical-align:top;">
+                    <strong>${escapeHtml(appointment.childName)}</strong>${appointment.childAge ? ` <span style="color:#5e7784;">(${escapeHtml(appointment.childAge)})</span>` : ""}<br />
+                    <span style="color:#5e7784;">${escapeHtml(appointment.service)} · ${escapeHtml(appointmentStatusLabel(appointment.status))}</span>
+                  </td>
+                  <td style="padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#143047;line-height:1.35;vertical-align:top;">
+                    <strong>${escapeHtml(appointment.parentName)}</strong><br />
+                    <span style="color:#5e7784;">${escapeHtml(appointment.phone)}${appointment.email ? ` · ${escapeHtml(appointment.email)}` : ""}</span>
+                  </td>
+                  <td style="padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#5e7784;line-height:1.35;vertical-align:top;">
+                    ${escapeHtml(appointment.notes || "-")}
+                  </td>
+                </tr>
+              `).join("")}
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+export async function blockScheduleDate(_prevState: BlockScheduleDateState, formData: FormData): Promise<BlockScheduleDateState> {
+  const currentUser = await requireFeature("schedule.manage");
+  const date = String(formData.get("date") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!isDateValue(date)) {
+    return {
+      message: "Alege o data valida.",
+      status: "error",
+    };
+  }
+
+  const blockedDate = blockedDateFromValue(date);
+  const dayOfWeek = weekdayFromDateValue(date);
+  const activeScheduleSlots = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ClinicScheduleSlot"
+    WHERE "isPaused" = false AND "dayOfWeek" = ${dayOfWeek}
+    LIMIT 1
+  `;
+
+  if (!activeScheduleSlots[0]) {
+    return {
+      message: "Ziua selectata oricum nu este in programul de lucru al cabinetului.",
+      status: "error",
+    };
+  }
+
+  await prisma.$executeRaw`
+    INSERT INTO "ClinicBlockedDate" ("id", "date", "reason", "createdBy")
+    VALUES (${crypto.randomUUID()}, ${blockedDate}, ${reason || null}, ${currentUser.id})
+    ON CONFLICT ("date") DO UPDATE SET
+      "reason" = EXCLUDED."reason",
+      "createdBy" = EXCLUDED."createdBy"
+  `;
+
+  const existingAppointments = await prisma.$queryRaw<Array<{
+    childAge: string | null;
+    childName: string;
+    email: string | null;
+    notes: string | null;
+    parentName: string;
+    phone: string;
+    service: string;
+    status: string;
+    time: string;
+  }>>`
+    SELECT "childAge", "childName", "email", "notes", "parentName", "phone", "service", "status", "time"
+    FROM "Appointment"
+    WHERE "date" = ${blockedDate}
+      AND "status" <> 'CANCELLED'
+    ORDER BY "time" ASC
+  `;
+
+  if (existingAppointments.length > 0) {
+    try {
+      const recipients = await getBlockedDateNotificationRecipients();
+      if (recipients.length > 0) {
+        await sendMail({
+          html: blockedDateNotificationHtml({ appointments: existingAppointments, date, reason }),
+          subject: `Ai blocat ${date}: programari de anuntat`,
+          text: blockedDateNotificationText({ appointments: existingAppointments, date, reason }),
+          to: recipients,
+        });
+      }
+    } catch (error) {
+      console.error("Blocked date appointment notification email error:", error);
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/program");
+
+  return {
+    message: existingAppointments.length > 0
+      ? `Ziua a fost blocata. Exista ${existingAppointments.length} programari active pentru reprogramare.`
+      : "Ziua a fost blocata.",
+    status: "success",
+  };
+}
+
+export async function deleteBlockedScheduleDate(formData: FormData) {
+  await requireFeature("schedule.manage");
+  const blockedDateId = String(formData.get("blockedDateId") ?? "").trim();
+
+  if (!blockedDateId) {
+    return;
+  }
+
+  await prisma.$executeRaw`
+    DELETE FROM "ClinicBlockedDate"
+    WHERE "id" = ${blockedDateId}
+  `;
+
+  revalidatePath("/");
+  revalidatePath("/programari");
+  revalidatePath("/admin/setari/program");
+}
+
 export async function confirmAppointment(appointmentId: string) {
   await requireFeature("appointments.manage");
 
@@ -623,6 +876,17 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
   }
 
   const dayOfWeek = weekdayFromDateValue(nextDate);
+  const blockedDate = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ClinicBlockedDate"
+    WHERE "date" = ${dateFromValue(nextDate)}
+    LIMIT 1
+  `;
+
+  if (blockedDate[0] && !allowOutsideSchedule) {
+    return { message: "Ziua aleasa este blocata in programul cabinetului.", status: "error" as const };
+  }
+
   const scheduleSlots = await prisma.$queryRaw<Array<{ startTime: string; endTime: string; durationMin: number }>>`
     SELECT "startTime", "endTime", "durationMin"
     FROM "ClinicScheduleSlot"

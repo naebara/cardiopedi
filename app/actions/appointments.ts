@@ -3,12 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
+import { formatScheduleDate } from "@/lib/schedule";
 import { clinic } from "../site-data";
-
-const APPOINTMENT_NOTIFICATION_EMAILS = [
-  "natanaelbarag@gmail.com",
-  "natanael.bara@emanuel.ro",
-];
 
 type AppointmentEmailData = {
   childName: string;
@@ -81,17 +77,7 @@ function escapeHtml(value: string) {
 }
 
 function formatAppointmentDate(value: string) {
-  const date = new Date(`${value}T12:00:00.000Z`);
-  const formatted = new Intl.DateTimeFormat("ro-RO", {
-    day: "2-digit",
-    month: "long",
-    weekday: "long",
-    year: "numeric",
-  }).format(date);
-
-  return formatted.replaceAll(/\p{L}+/gu, (word) => {
-    return word.charAt(0).toLocaleUpperCase("ro-RO") + word.slice(1);
-  });
+  return formatScheduleDate(value);
 }
 
 function formatPrice(cents: number, currency: string) {
@@ -281,11 +267,17 @@ function patientConfirmationHtml(appointment: AppointmentEmailData) {
 }
 
 async function notifyNewAppointment(appointment: AppointmentEmailData) {
+  const recipients = await getAppointmentNotificationRecipients();
+
+  if (recipients.length === 0) {
+    return;
+  }
+
   await sendMail({
     html: appointmentNotificationHtml(appointment),
     subject: `Programare noua: ${appointment.childName} - ${appointment.date} ${appointment.time}`,
     text: appointmentNotificationText(appointment),
-    to: APPOINTMENT_NOTIFICATION_EMAILS,
+    to: recipients,
   });
 }
 
@@ -300,6 +292,17 @@ async function sendPatientConfirmation(appointment: AppointmentEmailData) {
     text: patientConfirmationText(appointment),
     to: appointment.email,
   });
+}
+
+async function getAppointmentNotificationRecipients() {
+  const rows = await prisma.$queryRaw<Array<{ email: string }>>`
+    SELECT "email"
+    FROM "User"
+    WHERE "receivesAppointmentEmails" = true
+    ORDER BY "createdAt" ASC
+  `;
+
+  return rows.map((row) => row.email).filter(Boolean);
 }
 
 export async function createAppointment(
@@ -353,6 +356,20 @@ export async function createAppointment(
   }
 
   const dayOfWeek = weekdayFromDateValue(date);
+  const blockedDate = await prisma.$queryRaw<Array<{ id: string }>>`
+    SELECT "id"
+    FROM "ClinicBlockedDate"
+    WHERE "date" = ${dateFromValue(date)}
+    LIMIT 1
+  `;
+
+  if (blockedDate[0]) {
+    return {
+      message: "Ziua aleasa nu este disponibila pentru programari. Alege o alta data.",
+      status: "error",
+    };
+  }
+
   const scheduleSlots = await prisma.$queryRaw<Array<{ startTime: string; endTime: string; durationMin: number }>>`
     SELECT "startTime", "endTime", "durationMin"
     FROM "ClinicScheduleSlot"

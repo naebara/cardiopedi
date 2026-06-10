@@ -8,6 +8,8 @@ type UserRow = {
   name: string | null;
   email: string;
   isMasterUser: boolean;
+  receivesAppointmentEmails: boolean;
+  receivesBlockedDateEmails: boolean;
 };
 
 type GrantRow = {
@@ -18,7 +20,7 @@ type GrantRow = {
 async function getUsersWithAccess() {
   const [users, grants] = await Promise.all([
     prisma.$queryRaw<UserRow[]>`
-      SELECT "id", "name", "email", "isMasterUser"
+      SELECT "id", "name", "email", "isMasterUser", "receivesAppointmentEmails", "receivesBlockedDateEmails"
       FROM "User"
       ORDER BY "createdAt" ASC
     `,

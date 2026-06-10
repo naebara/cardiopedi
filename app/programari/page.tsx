@@ -1,17 +1,18 @@
 import { BookingForm } from "../components/BookingForm";
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
 import { getOccupiedAppointmentSlots } from "@/lib/appointments";
-import { getPublicScheduleSlots } from "@/lib/schedule";
+import { getPublicBlockedDates, getPublicScheduleSlots } from "@/lib/schedule";
 import { getPublicServices } from "@/lib/services";
 import styles from "../public-site.module.css";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppointmentsPage() {
-  const [services, schedule, occupiedSlots] = await Promise.all([
+  const [services, schedule, occupiedSlots, blockedDates] = await Promise.all([
     getPublicServices(),
     getPublicScheduleSlots(),
     getOccupiedAppointmentSlots(),
+    getPublicBlockedDates(),
   ]);
   const serviceOptions = services.map((service) => ({
     id: service.id,
@@ -34,7 +35,12 @@ export default async function AppointmentsPage() {
           <h1>Programare rapida, fara cont.</h1>
           <p>Selecteaza data, ora si lasa datele de contact.</p>
         </div>
-        <BookingForm occupiedSlots={occupiedSlots} schedule={scheduleOptions} services={serviceOptions} />
+        <BookingForm
+          blockedDates={blockedDates.map((blockedDate) => blockedDate.date)}
+          occupiedSlots={occupiedSlots}
+          schedule={scheduleOptions}
+          services={serviceOptions}
+        />
       </section>
       <PublicFooter schedule={schedule} />
     </main>

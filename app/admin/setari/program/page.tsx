@@ -1,10 +1,20 @@
 import { requireFeature } from "@/lib/admin-features";
-import { getAdminScheduleSlots, scheduleDayOptions, scheduleSlotWithDisplay } from "@/lib/schedule";
+import {
+  getActiveAppointmentCountsByDate,
+  getAdminBlockedDates,
+  getAdminScheduleSlots,
+  scheduleDayOptions,
+  scheduleSlotWithDisplay,
+} from "@/lib/schedule";
 import { ScheduleSettingsTable } from "./ScheduleSettingsTable";
 
 export default async function AdminScheduleSettingsPage() {
   await requireFeature("schedule.manage");
-  const slots = await getAdminScheduleSlots();
+  const [slots, blockedDates, appointmentCountsByDate] = await Promise.all([
+    getAdminScheduleSlots(),
+    getAdminBlockedDates(),
+    getActiveAppointmentCountsByDate(),
+  ]);
   const scheduleRows = slots.map((slot) => {
     const displaySlot = scheduleSlotWithDisplay(slot);
 
@@ -21,5 +31,12 @@ export default async function AdminScheduleSettingsPage() {
     };
   });
 
-  return <ScheduleSettingsTable dayOptions={scheduleDayOptions} slots={scheduleRows} />;
+  return (
+    <ScheduleSettingsTable
+      appointmentCountsByDate={appointmentCountsByDate}
+      blockedDates={blockedDates}
+      dayOptions={scheduleDayOptions}
+      slots={scheduleRows}
+    />
+  );
 }

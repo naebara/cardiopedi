@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CalendarDays,
   CalendarRange,
+  CalendarX2,
   Clock,
   Edit3,
   PauseCircle,
@@ -17,7 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { createScheduleSlot, deleteScheduleSlot, updateScheduleSlot } from "@/app/admin/actions";
+import { blockScheduleDate, createScheduleSlot, deleteBlockedScheduleDate, deleteScheduleSlot, updateScheduleSlot } from "@/app/admin/actions";
 import styles from "./schedule.module.css";
 
 type DayOption = {
@@ -37,7 +38,16 @@ export type ScheduleSlotRow = {
   sortOrder: number;
 };
 
+export type BlockedDateRow = {
+  id: string;
+  date: string;
+  dateLabel: string;
+  reason: string | null;
+};
+
 type ScheduleSettingsTableProps = {
+  appointmentCountsByDate: Array<{ count: number; date: string }>;
+  blockedDates: BlockedDateRow[];
   dayOptions: DayOption[];
   slots: ScheduleSlotRow[];
 };
@@ -46,6 +56,8 @@ type ActiveModal =
   | { type: "create"; defaultDay?: number }
   | { type: "edit"; slot: ScheduleSlotRow }
   | { type: "delete"; slot: ScheduleSlotRow }
+  | { type: "block-date" }
+  | { type: "delete-blocked-date"; blockedDate: BlockedDateRow }
   | null;
 
 const dayShortLabels: Record<number, string> = {
@@ -80,6 +92,14 @@ function hasValidScheduleTimes(formData: FormData) {
   const endTime = String(formData.get("endTime") ?? "");
 
   return Boolean(startTime && endTime && startTime < endTime);
+}
+
+function weekdayFromDateValue(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return null;
+  }
+
+  return new Date(`${value}T12:00:00.000Z`).getUTCDay();
 }
 
 function ScheduleFields({
@@ -241,20 +261,35 @@ function ModalSubmitButton({ idleLabel }: { idleLabel: string }) {
   );
 }
 
-function DeleteSubmitButton() {
+function DeleteSubmitButton({ idleLabel = "Sterge interval" }: { idleLabel?: string }) {
   const { pending } = useFormStatus();
 
   return (
     <button aria-busy={pending} className={styles.btnDanger} disabled={pending} type="submit">
-      {pending ? "Se sterge..." : "Sterge interval"}
+      {pending ? "Se sterge..." : idleLabel}
     </button>
   );
 }
 
-export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTableProps) {
+function BlockDateSubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button aria-busy={pending} className={styles.btnPrimary} disabled={pending} type="submit">
+      {pending ? "Se blocheaza..." : "Blocheaza ziua"}
+    </button>
+  );
+}
+
+export function ScheduleSettingsTable({ appointmentCountsByDate, blockedDates, dayOptions, slots }: ScheduleSettingsTableProps) {
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [selectedBlockDate, setSelectedBlockDate] = useState("");
   const [validationError, setValidationError] = useState("");
+  const selectedBlockDateAppointmentCount = appointmentCountsByDate.find((item) => item.date === selectedBlockDate)?.count ?? 0;
+  const activeScheduleDays = useMemo(() => new Set(slots.filter((slot) => !slot.isPaused).map((slot) => slot.dayOfWeek)), [slots]);
+  const selectedBlockDateWeekday = weekdayFromDateValue(selectedBlockDate);
+  const isSelectedBlockDateOutsideSchedule = Boolean(selectedBlockDate && selectedBlockDateWeekday !== null && !activeScheduleDays.has(selectedBlockDateWeekday));
 
   const activeCount = useMemo(() => slots.filter((slot) => !slot.isPaused).length, [slots]);
   const pausedCount = slots.length - activeCount;
@@ -275,6 +310,7 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
   }, [slots, dayOptions]);
 
   function closeModal() {
+    setSelectedBlockDate("");
     setValidationError("");
     setActiveModal(null);
   }
@@ -321,6 +357,34 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
   async function handleDelete(formData: FormData) {
     await deleteScheduleSlot(formData);
     setValidationError("");
+    setSelectedBlockDate("");
+    setActiveModal(null);
+    router.refresh();
+  }
+
+  async function handleBlockDate(formData: FormData) {
+    const date = String(formData.get("date") ?? "");
+    const dayOfWeek = weekdayFromDateValue(date);
+
+    if (dayOfWeek === null || !activeScheduleDays.has(dayOfWeek)) {
+      setValidationError("Ziua selectata oricum nu este in programul de lucru al cabinetului.");
+      return;
+    }
+
+    const result = await blockScheduleDate({ message: "", status: "idle" }, formData);
+    if (result.status === "error") {
+      setValidationError(result.message);
+      return;
+    }
+
+    setValidationError("");
+    setActiveModal(null);
+    router.refresh();
+  }
+
+  async function handleDeleteBlockedDate(formData: FormData) {
+    await deleteBlockedScheduleDate(formData);
+    setValidationError("");
     setActiveModal(null);
     router.refresh();
   }
@@ -330,7 +394,11 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
       ? "Adauga interval"
       : activeModal?.type === "edit"
         ? "Editeaza interval"
-        : "Sterge interval";
+        : activeModal?.type === "block-date"
+          ? "Blocheaza zi"
+          : activeModal?.type === "delete-blocked-date"
+            ? "Deblocheaza zi"
+            : "Sterge interval";
 
   return (
     <div className={styles.page}>
@@ -344,12 +412,25 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
           className={styles.addButton}
           onClick={() => {
             setValidationError("");
+            setSelectedBlockDate("");
             setActiveModal({ type: "create" });
           }}
           type="button"
         >
           <Plus size={18} />
           Adauga interval
+        </button>
+        <button
+          className={styles.secondaryButton}
+          onClick={() => {
+            setValidationError("");
+            setSelectedBlockDate("");
+            setActiveModal({ type: "block-date" });
+          }}
+          type="button"
+        >
+          <CalendarX2 size={18} />
+          Blocheaza zi
         </button>
       </header>
 
@@ -397,6 +478,7 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
               className={styles.addButton}
               onClick={() => {
                 setValidationError("");
+                setSelectedBlockDate("");
                 setActiveModal({ type: "create" });
               }}
               type="button"
@@ -489,6 +571,60 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
         )}
       </section>
 
+      <section className={styles.panel}>
+        <div className={styles.panelHead}>
+          <div>
+            <h2>Zile blocate</h2>
+            <p>Zilele blocate nu mai apar pe site pentru programari noi.</p>
+          </div>
+          <button
+            className={styles.addButton}
+            onClick={() => {
+              setValidationError("");
+              setSelectedBlockDate("");
+              setActiveModal({ type: "block-date" });
+            }}
+            type="button"
+          >
+            <CalendarX2 size={18} />
+            Blocheaza zi
+          </button>
+        </div>
+
+        {blockedDates.length === 0 ? (
+          <div className={styles.compactEmpty}>
+            <CalendarX2 size={24} />
+            <span>Nu exista zile blocate in perioada urmatoare.</span>
+          </div>
+        ) : (
+          <div className={styles.blockedGrid}>
+            {blockedDates.map((blockedDate) => (
+              <div className={styles.blockedItem} key={blockedDate.id}>
+                <div className={styles.blockedIcon}>
+                  <CalendarX2 size={18} />
+                </div>
+                <div className={styles.blockedText}>
+                  <strong>{blockedDate.dateLabel}</strong>
+                  <span>{blockedDate.reason || "Fara motiv adaugat"}</span>
+                </div>
+                <button
+                  aria-label={`Deblocheaza ${blockedDate.dateLabel}`}
+                  className={`${styles.slotBtn} ${styles.slotBtnDanger}`}
+                  onClick={() => {
+                    setValidationError("");
+              setActiveModal({ type: "delete-blocked-date", blockedDate });
+                  }}
+                  title="Deblocheaza"
+                  type="button"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {activeModal ? (
         <div
           className={styles.backdrop}
@@ -506,6 +642,8 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
                   <Sparkles size={22} />
                 ) : activeModal.type === "edit" ? (
                   <Edit3 size={20} />
+                ) : activeModal.type === "block-date" ? (
+                  <CalendarX2 size={20} />
                 ) : (
                   <Trash2 size={20} />
                 )}
@@ -515,7 +653,11 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
                 <p>
                   {activeModal.type === "create"
                     ? "Alege ziua, intervalul orar si durata fiecarui slot."
-                    : `${activeModal.slot.dayLabel} · ${activeModal.slot.interval}`}
+                    : activeModal.type === "edit" || activeModal.type === "delete"
+                      ? `${activeModal.slot.dayLabel} · ${activeModal.slot.interval}`
+                      : activeModal.type === "delete-blocked-date"
+                        ? activeModal.blockedDate.dateLabel
+                        : "Alege data si motivul blocarii."}
                 </p>
               </div>
               <button aria-label="Inchide" className={styles.closeBtn} onClick={closeModal} type="button">
@@ -543,6 +685,95 @@ export function ScheduleSettingsTable({ dayOptions, slots }: ScheduleSettingsTab
                     Renunta
                   </button>
                   <DeleteSubmitButton />
+                </div>
+              </form>
+            ) : activeModal.type === "delete-blocked-date" ? (
+              <form action={handleDeleteBlockedDate} className={styles.modalForm}>
+                <div className={styles.form}>
+                  <input name="blockedDateId" type="hidden" value={activeModal.blockedDate.id} />
+                  <div className={styles.confirm}>
+                    <strong>Confirmi deblocarea acestei zile?</strong>
+                    <span>Ziua va redeveni disponibila pentru programari daca exista intervale active in programul saptamanal.</span>
+                    <div className={styles.confirmSlot}>
+                      <CalendarX2 size={16} color="#b83b35" />
+                      <div>
+                        <strong>{activeModal.blockedDate.dateLabel}</strong>
+                        {activeModal.blockedDate.reason ? <span> · {activeModal.blockedDate.reason}</span> : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className={styles.footer}>
+                  <button className={styles.btnGhost} onClick={closeModal} type="button">
+                    Renunta
+                  </button>
+                  <DeleteSubmitButton idleLabel="Deblocheaza ziua" />
+                </div>
+              </form>
+            ) : activeModal.type === "block-date" ? (
+              <form action={handleBlockDate} className={styles.modalForm} onChange={() => setValidationError("")}>
+                <div className={styles.form}>
+                  <div className={styles.section}>
+                    <span className={styles.sectionLabel}>
+                      <CalendarX2 size={14} /> Zi indisponibila
+                    </span>
+                    <label className={styles.field}>
+                      <span>Data</span>
+                      <input
+                        className={styles.input}
+                        min={new Date().toISOString().slice(0, 10)}
+                        name="date"
+                        onChange={(event) => setSelectedBlockDate(event.target.value)}
+                        required
+                        type="date"
+                      />
+                    </label>
+                    {selectedBlockDateAppointmentCount ? (
+                      <div className={styles.appointmentWarning} role="alert">
+                        <AlertTriangle size={18} />
+                        <div>
+                          <strong>
+                            In aceasta zi {selectedBlockDateAppointmentCount === 1 ? "exista deja o programare" : `exista deja ${selectedBlockDateAppointmentCount} programari`}.
+                          </strong>
+                          <span>Dupa blocare, vei primi pe email detaliile de contact ca sa anunti pacientii si sa stabiliti reprogramarea.</span>
+                        </div>
+                      </div>
+                    ) : null}
+                    {isSelectedBlockDateOutsideSchedule ? (
+                      <div className={styles.scheduleNotice} role="status">
+                        <CalendarDays size={18} />
+                        <div>
+                          <strong>Ziua selectata nu este in programul de lucru al cabinetului.</strong>
+                          <span>Nu este nevoie sa o blochezi: pacientii oricum nu pot face programari in acea zi.</span>
+                        </div>
+                      </div>
+                    ) : null}
+                    <label className={styles.field}>
+                      <span>Motiv</span>
+                      <textarea className={styles.textarea} name="reason" placeholder="Concediu, conferinta, alta indisponibilitate" rows={3} />
+                    </label>
+                  </div>
+                  <div className={styles.preview} aria-live="polite">
+                    <span className={styles.previewIcon}>
+                      <AlertTriangle size={20} />
+                    </span>
+                    <div className={styles.previewText}>
+                      <span className={styles.previewTitle}>Programarile noi vor fi oprite pentru aceasta zi.</span>
+                      <span className={styles.previewSub}>Daca exista programari active, administratorii bifati pentru notificari vor primi email.</span>
+                    </div>
+                  </div>
+                  {validationError ? (
+                    <p className={styles.error} role="alert">
+                      <AlertTriangle size={16} />
+                      {validationError}
+                    </p>
+                  ) : null}
+                </div>
+                <div className={styles.footer}>
+                  <button className={styles.btnGhost} onClick={closeModal} type="button">
+                    Renunta
+                  </button>
+                  <BlockDateSubmitButton />
                 </div>
               </form>
             ) : (

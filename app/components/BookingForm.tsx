@@ -94,10 +94,12 @@ function SubmitButton({
 }
 
 export function BookingForm({
+  blockedDates,
   occupiedSlots,
   schedule,
   services,
 }: {
+  blockedDates: string[];
   occupiedSlots: OccupiedSlot[];
   schedule: BookingScheduleOption[];
   services: BookingServiceOption[];
@@ -107,6 +109,7 @@ export function BookingForm({
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const occupiedSlotValues = useMemo(() => new Set(occupiedSlots.map((slot) => `${slot.date}|${slot.time}`)), [occupiedSlots]);
+  const blockedDateValues = useMemo(() => new Set(blockedDates), [blockedDates]);
   const scheduleByWeekday = useMemo(() => {
     return schedule.reduce<Record<number, BookingScheduleOption[]>>((acc, slot) => {
       acc[slot.dayOfWeek] = [...(acc[slot.dayOfWeek] ?? []), slot];
@@ -123,6 +126,10 @@ export function BookingForm({
       date.setDate(today.getDate() + offset);
 
       const daySlots = (scheduleByWeekday[date.getDay()] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin));
+      if (blockedDateValues.has(dateValue(date))) {
+        continue;
+      }
+
       const freeSlots = daySlots.filter((slot) => !occupiedSlotValues.has(`${dateValue(date)}|${slot}`));
 
       if (freeSlots.length) {
@@ -135,7 +142,7 @@ export function BookingForm({
     }
 
     return dates;
-  }, [occupiedSlotValues, scheduleByWeekday]);
+  }, [blockedDateValues, occupiedSlotValues, scheduleByWeekday]);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [phone, setPhone] = useState("");

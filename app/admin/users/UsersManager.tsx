@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { Pencil, Plus, ShieldCheck, X } from "lucide-react";
+import { CalendarX2, MailCheck, Pencil, Plus, ShieldCheck, X } from "lucide-react";
 import { createAdminUser, updateUserAccess, type CreateAdminUserState } from "@/app/admin/actions";
 import type { AdminFeatureKey } from "@/lib/admin-features";
 import styles from "../admin.module.css";
@@ -17,6 +17,8 @@ type UserAccessRow = {
   name: string | null;
   email: string;
   isMasterUser: boolean;
+  receivesAppointmentEmails: boolean;
+  receivesBlockedDateEmails: boolean;
   features: string[];
 };
 
@@ -46,6 +48,8 @@ function featureSummary(user: UserAccessRow, features: readonly FeatureOption[])
 function CreateUserForm({ features }: { features: readonly FeatureOption[] }) {
   const [state, formAction, isPending] = useActionState(createAdminUser, initialCreateState);
   const [isMasterUser, setIsMasterUser] = useState(false);
+  const [receivesAppointmentEmails, setReceivesAppointmentEmails] = useState(false);
+  const [receivesBlockedDateEmails, setReceivesBlockedDateEmails] = useState(false);
 
   return (
     <form action={formAction} className={styles.modalFormStack}>
@@ -73,6 +77,28 @@ function CreateUserForm({ features }: { features: readonly FeatureOption[] }) {
         />
         Master user
       </label>
+
+      <div className={styles.notificationBox}>
+        <h3>Notificari</h3>
+        <label className={styles.notificationCheck}>
+          <input
+            checked={receivesAppointmentEmails}
+            name="receivesAppointmentEmails"
+            onChange={(event) => setReceivesAppointmentEmails(event.target.checked)}
+            type="checkbox"
+          />
+          <span>Primeste notificari la programare noua</span>
+        </label>
+        <label className={styles.notificationCheck}>
+          <input
+            checked={receivesBlockedDateEmails}
+            name="receivesBlockedDateEmails"
+            onChange={(event) => setReceivesBlockedDateEmails(event.target.checked)}
+            type="checkbox"
+          />
+          <span>Primeste notificari cand sunt programari si se face zi concediu peste programari existente</span>
+        </label>
+      </div>
 
       <div className={styles.featureGrid}>
         {features.map((feature) => (
@@ -112,6 +138,8 @@ function EditAccessForm({
 }) {
   const isOwnUser = user.id === currentUserId;
   const [isMasterUser, setIsMasterUser] = useState(user.isMasterUser);
+  const [receivesAppointmentEmails, setReceivesAppointmentEmails] = useState(user.receivesAppointmentEmails);
+  const [receivesBlockedDateEmails, setReceivesBlockedDateEmails] = useState(user.receivesBlockedDateEmails);
   const [selectedFeatures, setSelectedFeatures] = useState(user.features);
   const [isPending, startTransition] = useTransition();
 
@@ -132,6 +160,8 @@ function EditAccessForm({
         ...user,
         features: isMasterUser ? [] : selectedFeatures,
         isMasterUser: isOwnUser ? true : isMasterUser,
+        receivesAppointmentEmails,
+        receivesBlockedDateEmails,
       });
     });
   }
@@ -150,6 +180,28 @@ function EditAccessForm({
         />
         Master user
       </label>
+
+      <div className={styles.notificationBox}>
+        <h3>Notificari</h3>
+        <label className={styles.notificationCheck}>
+          <input
+            checked={receivesAppointmentEmails}
+            name="receivesAppointmentEmails"
+            onChange={(event) => setReceivesAppointmentEmails(event.target.checked)}
+            type="checkbox"
+          />
+          <span>Primeste notificari la programare noua</span>
+        </label>
+        <label className={styles.notificationCheck}>
+          <input
+            checked={receivesBlockedDateEmails}
+            name="receivesBlockedDateEmails"
+            onChange={(event) => setReceivesBlockedDateEmails(event.target.checked)}
+            type="checkbox"
+          />
+          <span>Primeste notificari cand sunt programari si se face zi concediu peste programari existente</span>
+        </label>
+      </div>
 
       <div className={styles.featureGrid}>
         {features.map((feature) => (
@@ -218,6 +270,7 @@ export function UsersManager({
               <tr>
                 <th>Utilizator</th>
                 <th>Rol</th>
+                <th>Notificari</th>
                 <th>Acces</th>
                 <th>Actiuni</th>
               </tr>
@@ -239,6 +292,28 @@ export function UsersManager({
                         "Utilizator"
                       )}
                     </span>
+                  </td>
+                  <td data-label="Notificari">
+                    <div className={styles.notificationPills}>
+                      <span className={user.receivesAppointmentEmails ? styles.statusLive : styles.status}>
+                        {user.receivesAppointmentEmails ? (
+                          <>
+                            <MailCheck size={14} /> Programari noi
+                          </>
+                        ) : (
+                          "Programari oprit"
+                        )}
+                      </span>
+                      <span className={user.receivesBlockedDateEmails ? styles.statusLive : styles.status}>
+                        {user.receivesBlockedDateEmails ? (
+                          <>
+                            <CalendarX2 size={14} /> Concediu cu programari
+                          </>
+                        ) : (
+                          "Concediu oprit"
+                        )}
+                      </span>
+                    </div>
                   </td>
                   <td data-label="Acces">
                     <span className={styles.userAccessSummary}>{featureSummary(user, features)}</span>

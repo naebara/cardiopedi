@@ -24,18 +24,15 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates curl openssl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY package.json package-lock.json ./
-COPY prisma ./prisma
-COPY prisma.config.ts ./prisma.config.ts
+COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node prisma ./prisma
+COPY --chown=node:node prisma.config.ts ./prisma.config.ts
 RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/scripts/start-production.sh ./scripts/start-production.sh
-
-RUN chmod +x ./scripts/start-production.sh \
-    && chown -R node:node /app
+COPY --from=builder --chown=node:node /app/public ./public
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node --chmod=755 /app/scripts/start-production.sh ./scripts/start-production.sh
 
 USER node
 

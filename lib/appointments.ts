@@ -9,7 +9,6 @@ export type AdminAppointment = {
   childName: string;
   childAge: string | null;
   parentName: string;
-  service: string;
   phone: string;
   email: string | null;
   notes: string | null;
@@ -48,7 +47,6 @@ type AppointmentRow = {
   childName: string;
   childAge: string | null;
   parentName: string;
-  service: string;
   phone: string;
   email: string | null;
   notes: string | null;
@@ -89,7 +87,6 @@ export async function getAdminAppointments() {
       "childName",
       "childAge",
       "parentName",
-      "service",
       "phone",
       "email",
       "notes",
@@ -194,7 +191,6 @@ export async function getAdminPatientDetails(patientId: string): Promise<AdminPa
       "childName",
       "childAge",
       "parentName",
-      "service",
       "phone",
       "email",
       "notes",

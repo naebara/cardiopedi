@@ -2,22 +2,16 @@ import { BookingForm } from "../components/BookingForm";
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
 import { getOccupiedAppointmentSlots } from "@/lib/appointments";
 import { getPublicBlockedDates, getPublicScheduleSlots } from "@/lib/schedule";
-import { getPublicServices } from "@/lib/services";
 import styles from "../public-site.module.css";
 
 export const dynamic = "force-dynamic";
 
 export default async function AppointmentsPage() {
-  const [services, schedule, occupiedSlots, blockedDates] = await Promise.all([
-    getPublicServices(),
+  const [schedule, occupiedSlots, blockedDates] = await Promise.all([
     getPublicScheduleSlots(),
     getOccupiedAppointmentSlots(),
     getPublicBlockedDates(),
   ]);
-  const serviceOptions = services.map((service) => ({
-    id: service.id,
-    name: service.name,
-  }));
   const scheduleOptions = schedule.map((slot) => ({
     dayOfWeek: slot.dayOfWeek,
     durationMin: slot.durationMin,
@@ -44,7 +38,6 @@ export default async function AppointmentsPage() {
           }))}
           occupiedSlots={occupiedSlots}
           schedule={scheduleOptions}
-          services={serviceOptions}
         />
       </section>
       <PublicFooter schedule={schedule} />

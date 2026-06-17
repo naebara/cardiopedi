@@ -10,7 +10,6 @@ export type Appointment = {
   childName: string;
   childAge: string | null;
   parentName: string;
-  service: string;
   phone: string;
   email: string | null;
   notes: string | null;
@@ -38,7 +37,6 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
             <th>Data</th>
             <th>Ora</th>
             <th>Copil</th>
-            <th>Serviciu</th>
             <th>Contact</th>
             <th>Status</th>
           </tr>
@@ -56,7 +54,6 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
                 <div className={styles.rowChild}>{appointment.childName}</div>
                 <div className={styles.rowSub}>{appointment.childAge || "-"} · {appointment.parentName}</div>
               </td>
-              <td>{appointment.service}</td>
               <td>{appointment.phone}</td>
               <td>
                 <Badge color={statusColor[appointment.status] ?? "gray"} variant="light" radius="sm">
@@ -67,7 +64,7 @@ export function AdminAppointmentsList({ appointments, onSelect }: AdminAppointme
           ))}
           {appointments.length === 0 && (
             <tr>
-              <td colSpan={6} className={styles.emptyList}>
+              <td colSpan={5} className={styles.emptyList}>
                 Nu există programări pentru perioada selectată.
               </td>
             </tr>

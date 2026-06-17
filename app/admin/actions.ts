@@ -670,7 +670,6 @@ type BlockedDateAppointmentEmailRow = {
   notes: string | null;
   parentName: string;
   phone: string;
-  service: string;
   status: string;
   time: string;
 };
@@ -712,7 +711,7 @@ function blockedDateNotificationText({
     ...appointments.map((appointment) => {
       return [
         `Data: ${formatScheduleDate(appointment.date)}`,
-        `${appointment.time} - ${appointment.service}`,
+        `Ora: ${appointment.time}`,
         `Copil: ${appointment.childName}${appointment.childAge ? ` (${appointment.childAge})` : ""}`,
         `Parinte: ${appointment.parentName}`,
         `Telefon: ${appointment.phone}`,
@@ -775,7 +774,7 @@ function blockedDateNotificationHtml({
                   </td>
                   <td style="padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#143047;line-height:1.35;vertical-align:top;">
                     <strong>${escapeHtml(appointment.childName)}</strong>${appointment.childAge ? ` <span style="color:#5e7784;">(${escapeHtml(appointment.childAge)})</span>` : ""}<br />
-                    <span style="color:#5e7784;">${escapeHtml(appointment.service)} · ${escapeHtml(appointmentStatusLabel(appointment.status))}</span>
+                    <span style="color:#5e7784;">${escapeHtml(appointmentStatusLabel(appointment.status))}</span>
                   </td>
                   <td style="padding:9px 6px;border-bottom:1px solid #e6f0f1;color:#143047;line-height:1.35;vertical-align:top;">
                     <strong>${escapeHtml(appointment.parentName)}</strong><br />
@@ -867,11 +866,10 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
     notes: string | null;
     parentName: string;
     phone: string;
-    service: string;
     status: string;
     time: string;
   }>>`
-    SELECT "childAge", "childName", "date", "email", "notes", "parentName", "phone", "service", "status", "time"
+    SELECT "childAge", "childName", "date", "email", "notes", "parentName", "phone", "status", "time"
     FROM "Appointment"
     WHERE "date" BETWEEN ${blockedDate} AND ${blockedEndDate}
       AND "status" <> 'CANCELLED'

@@ -33,7 +33,6 @@ function appointmentMatchesSearch(appointment: Appointment, search: string) {
     appointment.childName,
     appointment.childAge ?? "",
     appointment.parentName,
-    appointment.service,
     appointment.phone,
     appointment.email ?? "",
     appointment.notes ?? "",
@@ -174,7 +173,7 @@ export function AppointmentsPanel({
             className={styles.searchInput}
             leftSection={<Search size={16} />}
             onChange={(event) => setSearch(event.currentTarget.value)}
-            placeholder="Cauta copil, parinte, serviciu"
+            placeholder="Cauta copil, parinte, telefon"
             size="sm"
             value={search}
           />

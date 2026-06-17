@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal, Text } from "@mantine/core";
-import { Baby, CalendarDays, Clock, HeartPulse, Phone, UserRound } from "lucide-react";
+import { Baby, CalendarDays, Clock, Phone, UserRound } from "lucide-react";
 import type { AdminPatientAppointment } from "@/lib/appointments";
 import styles from "../../admin.module.css";
 
@@ -32,7 +32,6 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
           <tr>
             <th>Data</th>
             <th>Ora</th>
-            <th>Serviciu</th>
             <th>Varsta</th>
             <th>Parinte</th>
             <th>Telefon</th>
@@ -59,9 +58,6 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
               </td>
               <td>
                 <span className={styles.historyCellIcon}><Clock size={14} /> {appointment.time}</span>
-              </td>
-              <td>
-                <span className={styles.historyCellIcon}><HeartPulse size={14} /> {appointment.service}</span>
               </td>
               <td>
                 <span className={styles.historyCellIcon}><Baby size={14} /> {appointment.childAge || "-"}</span>

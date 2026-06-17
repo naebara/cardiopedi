@@ -43,7 +43,7 @@ function AppointmentTitle({ appointment }: { appointment: Appointment }) {
       </ThemeIcon>
       <Box>
         <Text fw={700} size="lg" lh={1.2}>
-          {appointment.service}
+          {appointment.childName}
         </Text>
         <Badge color={color} variant="light" size="sm" radius="sm" mt={4}>
           {appointment.status}
@@ -242,7 +242,7 @@ export function AppointmentDetailsPanel({
           <div className={styles.detailsPanelHeader}>
             <div>
               <Text fw={850} className={styles.detailsPanelTitle}>
-                {appointment.service}
+                {appointment.childName}
               </Text>
             </div>
             <ActionIcon variant="subtle" color="gray" onClick={onClose} aria-label="Inchide detaliile">

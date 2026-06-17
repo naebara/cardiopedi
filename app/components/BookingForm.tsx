@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, HeartPulse, Info, Mail, Phone, Send, UserRound, X } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info, Mail, Phone, Send, UserRound, X } from "lucide-react";
 import { createAppointment, type AppointmentFormState } from "@/app/actions/appointments";
 import { appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
@@ -45,11 +45,6 @@ function buildSlots(start: string, end: string, durationMin: number) {
   }
   return slots;
 }
-
-type BookingServiceOption = {
-  id: string;
-  name: string;
-};
 
 type BookingScheduleOption = {
   id: string;
@@ -118,12 +113,10 @@ export function BookingForm({
   blockedPeriods,
   occupiedSlots,
   schedule,
-  services,
 }: {
   blockedPeriods: BlockedPeriod[];
   occupiedSlots: OccupiedSlot[];
   schedule: BookingScheduleOption[];
-  services: BookingServiceOption[];
 }) {
   const [formState, formAction] = useActionState(createAppointment, initialState);
   const formRef = useRef<HTMLFormElement>(null);
@@ -344,20 +337,6 @@ export function BookingForm({
         </label>
 
         <label>
-          <span><HeartPulse size={18} /> Serviciu</span>
-          <select disabled={services.length === 0} name="service" required defaultValue="">
-            <option value="">
-              {services.length === 0 ? "Nu exista servicii disponibile" : "Alege serviciul"}
-            </option>
-            {services.map((service) => (
-              <option key={service.id} value={service.name}>
-                {service.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
           <span><UserRound size={18} /> Nume parinte</span>
           <input name="parentName" type="text" placeholder="Nume si prenume" required />
         </label>
@@ -405,7 +384,7 @@ export function BookingForm({
         <p>{appointmentNotice}</p>
       </div>
 
-        <SubmitButton disabled={services.length === 0 || availableDates.length === 0} />
+        <SubmitButton disabled={availableDates.length === 0} />
 
       {formState.status === "error" ? (
         <div className={styles.errorBox} role="status">

@@ -15,8 +15,6 @@ type AppointmentEmailData = {
   notes: string;
   parentName: string;
   phone: string;
-  service: string;
-  servicePrice: string;
   time: string;
 };
 
@@ -80,52 +78,7 @@ function formatAppointmentDate(value: string) {
   return formatScheduleDate(value);
 }
 
-function formatPrice(cents: number, currency: string) {
-  return new Intl.NumberFormat("ro-RO", {
-    currency,
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(cents / 100);
-}
-
-function hasActiveDiscount(service: {
-  discountEnabled: boolean;
-  discountEndsAt: Date | null;
-  discountPercent: number;
-  discountStartsAt: Date | null;
-}) {
-  const now = new Date();
-
-  if (!service.discountEnabled || service.discountPercent <= 0) {
-    return false;
-  }
-
-  if (service.discountStartsAt && service.discountStartsAt > now) {
-    return false;
-  }
-
-  if (service.discountEndsAt && service.discountEndsAt < now) {
-    return false;
-  }
-
-  return true;
-}
-
-function servicePriceLabel(service: {
-  currency: string;
-  discountEnabled: boolean;
-  discountEndsAt: Date | null;
-  discountPercent: number;
-  discountStartsAt: Date | null;
-  priceCents: number;
-}) {
-  if (!hasActiveDiscount(service)) {
-    return formatPrice(service.priceCents, service.currency);
-  }
-
-  const discountedPriceCents = Math.max(0, Math.round(service.priceCents * (100 - service.discountPercent) / 100));
-  return `${formatPrice(discountedPriceCents, service.currency)} (redus de la ${formatPrice(service.priceCents, service.currency)})`;
-}
+const DEFAULT_APPOINTMENT_SERVICE = "Programare";
 
 function appointmentNotificationText(appointment: AppointmentEmailData) {
   return [
@@ -133,7 +86,6 @@ function appointmentNotificationText(appointment: AppointmentEmailData) {
     "",
     `Data: ${formatAppointmentDate(appointment.date)}`,
     `Ora: ${appointment.time} (${appointment.durationMin} min)`,
-    `Serviciu: ${appointment.service}`,
     "",
     `Copil: ${appointment.childName}`,
     `Varsta: ${appointment.childAge || "-"}`,
@@ -148,7 +100,6 @@ function appointmentNotificationHtml(appointment: AppointmentEmailData) {
   const rows = [
     ["Data", formatAppointmentDate(appointment.date)],
     ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
-    ["Serviciu", appointment.service],
     ["Copil", appointment.childName],
     ["Varsta", appointment.childAge || "-"],
     ["Parinte", appointment.parentName],
@@ -195,8 +146,6 @@ function patientConfirmationText(appointment: AppointmentEmailData) {
     "Detalii programare:",
     `Data: ${formatAppointmentDate(appointment.date)}`,
     `Ora: ${appointment.time} (${appointment.durationMin} min)`,
-    `Serviciu: ${appointment.service}`,
-    `Pret: ${appointment.servicePrice}`,
     `Copil: ${appointment.childName}`,
     `Varsta: ${appointment.childAge || "-"}`,
     "",
@@ -215,8 +164,6 @@ function patientConfirmationHtml(appointment: AppointmentEmailData) {
   const rows = [
     ["Data", formatAppointmentDate(appointment.date)],
     ["Ora", `${appointment.time} (${appointment.durationMin} min)`],
-    ["Serviciu", appointment.service],
-    ["Pret", appointment.servicePrice],
     ["Copil", appointment.childName],
     ["Varsta", appointment.childAge || "-"],
     ["Locatie", clinic.address],
@@ -311,7 +258,6 @@ export async function createAppointment(
 ): Promise<AppointmentFormState> {
   const date = textValue(formData, "date");
   const time = textValue(formData, "time");
-  const service = textValue(formData, "service");
   const parentName = textValue(formData, "parentName");
   const childName = textValue(formData, "childName");
   const childAge = textValue(formData, "childAge");
@@ -319,38 +265,9 @@ export async function createAppointment(
   const email = textValue(formData, "email");
   const notes = textValue(formData, "notes");
 
-  if (!isDateValue(date) || !isTimeValue(time) || !service || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
+  if (!isDateValue(date) || !isTimeValue(time) || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
     return {
-      message: "Completeaza corect data, ora, serviciul si datele de contact.",
-      status: "error",
-    };
-  }
-
-  const activeServices = await prisma.$queryRaw<Array<{
-    currency: string;
-    discountEnabled: boolean;
-    discountEndsAt: Date | null;
-    discountPercent: number;
-    discountStartsAt: Date | null;
-    name: string;
-    priceCents: number;
-  }>>`
-    SELECT
-      "name",
-      "priceCents",
-      "currency",
-      "discountEnabled",
-      "discountPercent",
-      "discountStartsAt",
-      "discountEndsAt"
-    FROM "MedicalService"
-    WHERE "isPaused" = false AND "name" = ${service}
-    LIMIT 1
-  `;
-
-  if (!activeServices[0]) {
-    return {
-      message: "Serviciul ales nu mai este disponibil. Reincarca pagina si alege din nou.",
+      message: "Completeaza corect data, ora si datele de contact.",
       status: "error",
     };
   }
@@ -431,7 +348,7 @@ export async function createAppointment(
         ${appointmentDate},
         ${time},
         ${matchingScheduleSlot.durationMin},
-        ${service},
+        ${DEFAULT_APPOINTMENT_SERVICE},
         ${parentName},
         ${childName},
         ${childAge},
@@ -461,8 +378,6 @@ export async function createAppointment(
     notes,
     parentName,
     phone,
-    service,
-    servicePrice: servicePriceLabel(activeServices[0]),
     time,
   };
 

@@ -13,12 +13,6 @@ export default async function MedicalGuidesPage() {
   return (
     <main className={styles.siteShell}>
       <PublicHeader />
-      <section className={styles.pageHero}>
-        <p className={styles.eyebrow}>Informații medicale</p>
-        <h1>Ghiduri medicale pentru părinți, explicate clar.</h1>
-        <p>Articole despre situații frecvente în cardiologia pediatrică și pașii recomandați pentru evaluare.</p>
-      </section>
-
       <section className={styles.section}>
         <div className={styles.guideGrid}>
           {medicalGuides.map((guide) => (

@@ -8,8 +8,8 @@ export const authConfig = {
         authorized({ auth, request: { nextUrl } }) {
             const isLoggedIn = !!auth?.user;
             const isOnAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/forgot-password');
-            const publicPaths = ['/', '/servicii', '/programari', '/despre', '/contact'];
-            const isPublicPage = publicPaths.includes(nextUrl.pathname);
+            const publicPaths = ['/', '/servicii', '/programari', '/despre', '/contact', '/ghiduri-medicale'];
+            const isPublicPage = publicPaths.includes(nextUrl.pathname) || nextUrl.pathname.startsWith('/ghiduri-medicale/');
 
             if (isOnAuthPage) {
                 return true;

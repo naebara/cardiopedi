@@ -37,7 +37,23 @@ export function labelDateShort(date: Date) {
   const formatted = new Intl.DateTimeFormat("ro-RO", {
     weekday: "short",
   }).format(date);
-  return formatted.replace(/(^|,\s)(\p{L})/gu, (_, prefix, letter) => `${prefix}${letter.toLocaleUpperCase("ro-RO")}`);
+  return capitalizeDateLabel(formatted);
+}
+
+function capitalizeDateLabel(value: string) {
+  let shouldCapitalize = true;
+
+  return Array.from(value, (char) => {
+    const isLetter = char.toLocaleLowerCase("ro-RO") !== char.toLocaleUpperCase("ro-RO");
+    const next = shouldCapitalize && isLetter ? char.toLocaleUpperCase("ro-RO") : char;
+
+    shouldCapitalize = char === "," || char === " " || char === "-";
+    if (isLetter || /\d/.test(char)) {
+      shouldCapitalize = false;
+    }
+
+    return next;
+  }).join("");
 }
 
 export function calculateEventPosition(time: string, durationMin: number, startHour: number, pixelsPerHour: number) {

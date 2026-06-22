@@ -12,6 +12,7 @@ const navigation = [
   { href: "/servicii", label: "Servicii" },
   { href: "/programari", label: "Programari" },
   { href: "/despre", label: "Despre" },
+  { href: "/ghiduri-medicale", label: "Ghiduri medicale" },
   { href: "/contact", label: "Contact" },
 ];
 

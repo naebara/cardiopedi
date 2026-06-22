@@ -74,7 +74,7 @@ function dayLabel(date: Date) {
     weekday: "long",
   }).format(date);
 
-  return formatted.replace(/^(\p{L})/u, (letter) => letter.toLocaleUpperCase("ro-RO"));
+  return formatted.charAt(0).toLocaleUpperCase("ro-RO") + formatted.slice(1);
 }
 
 export async function getAdminAppointments() {

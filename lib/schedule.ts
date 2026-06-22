@@ -79,9 +79,23 @@ export function formatScheduleDate(value: string | Date) {
     timeZone: "UTC",
   }).format(date);
 
-  return formatted.replaceAll(/\p{L}+/gu, (word) => {
-    return word.charAt(0).toLocaleUpperCase("ro-RO") + word.slice(1);
-  });
+  return capitalizeDateLabel(formatted);
+}
+
+function capitalizeDateLabel(value: string) {
+  let shouldCapitalize = true;
+
+  return Array.from(value, (char) => {
+    const isLetter = char.toLocaleLowerCase("ro-RO") !== char.toLocaleUpperCase("ro-RO");
+    const next = shouldCapitalize && isLetter ? char.toLocaleUpperCase("ro-RO") : char;
+
+    shouldCapitalize = char === "," || char === " " || char === "-";
+    if (isLetter || /\d/.test(char)) {
+      shouldCapitalize = false;
+    }
+
+    return next;
+  }).join("");
 }
 
 function blockedDateWithDisplay(row: ClinicBlockedDate): PublicBlockedDate {

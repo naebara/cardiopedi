@@ -1,5 +1,5 @@
 import { PublicFooter, PublicHeader } from "../components/PublicLayout";
-import { AboutSection, CarePrinciples } from "../components/Sections";
+import { AboutSection, CarePrinciples, MedicalTeam } from "../components/Sections";
 import { getPublicScheduleSlots } from "@/lib/schedule";
 import styles from "../public-site.module.css";
 
@@ -16,6 +16,7 @@ export default async function AboutPage() {
         <h1>Cardiopedi, cardiologie pediatrica intr-un cadru prietenos.</h1>
       </section>
       <AboutSection />
+      <MedicalTeam />
       <CarePrinciples />
       <PublicFooter schedule={schedule} />
     </main>

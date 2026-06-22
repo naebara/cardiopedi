@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Activity, ArrowRight, Baby, CalendarCheck, CheckCircle2, Clock, HeartPulse, ShieldCheck, Stethoscope } from "lucide-react";
+import { Activity, ArrowRight, Baby, CalendarCheck, CheckCircle2, Clock, HeartPulse, ShieldCheck, Stethoscope, UserRound } from "lucide-react";
 import type { PublicScheduleSlot } from "@/lib/schedule";
 import type { PublicService } from "@/lib/services";
 import { clinic } from "../site-data";
@@ -11,7 +11,7 @@ export function Hero() {
     <section className={styles.hero}>
       <div className={styles.heroContent}>
         <p className={styles.eyebrow}>{clinic.domain}</p>
-        <h1>Cardiologie pediatrica cu timp, rabdare si raspunsuri clare.</h1>
+        <h1>Cardiologie pediatrică cu timp, răbdare și grijă pentru fiecare copil.</h1>
         <p>
           Consultatii de specialitate, ecocardiografie, EKG si monitorizari pentru copii,
           intr-un cabinet gandit pentru familie.
@@ -172,6 +172,67 @@ export function CarePrinciples() {
             <p>{item.text}</p>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+export function MedicalTeam() {
+  const team: Array<{
+    initials: string;
+    name: string;
+    photo?: string;
+    role: string;
+    text: string;
+  }> = [
+    {
+      initials: "MB",
+      name: "Dr. Mihaela Bădulescu",
+      photo: "/team/mihaela-badulescu.png",
+      role: "Medic specialist cardiologie pediatrică",
+      text:
+        "Medic specialist cardiologie pediatrică, cu pregătire în cadrul Institutului de Urgență pentru Boli Cardiovasculare și Transplant Târgu Mureș. Este membră a Association for European Paediatric and Congenital Cardiology (AEPC) și participă constant la cursuri și congrese de specialitate dedicate cardiologiei pediatrice și bolilor cardiace congenitale.",
+    },
+    {
+      initials: "IP",
+      name: "Ioana Pașca",
+      role: "Asistent medical",
+      text:
+        "Cu o experiență de peste 20 de ani în domeniul pediatriei, Ioana Pașca este un sprijin important pentru copii și familiile acestora. Prin profesionalism, răbdare și empatie, contribuie la crearea unui mediu sigur și prietenos, în care cei mici se simt în largul lor, iar părinții primesc sprijin și îndrumare pe tot parcursul vizitei.",
+    },
+  ];
+
+  return (
+    <section className={styles.teamSection}>
+      <div className={styles.sectionHeader}>
+        <p className={styles.eyebrow}>Echipa medicală</p>
+        <h2>O echipă cu experiență în îngrijirea copiilor și comunicarea cu familia.</h2>
+      </div>
+
+      <div className={styles.teamGrid}>
+        {team.map((member) => {
+          const photo = member.photo;
+
+          return (
+            <article className={styles.teamMember} key={member.name}>
+              <div className={styles.teamAvatar}>
+                {photo ? (
+                  <Image src={photo} alt={member.name} fill sizes="96px" className={styles.teamPhoto} />
+                ) : (
+                  <>
+                    <UserRound size={28} />
+                    <strong>{member.initials}</strong>
+                  </>
+                )}
+              </div>
+              <div>
+                <h3>{member.name}</h3>
+                <p className={styles.teamRole}>{member.role}</p>
+                <p>{member.text}</p>
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

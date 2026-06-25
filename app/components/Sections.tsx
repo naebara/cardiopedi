@@ -181,6 +181,7 @@ export function MedicalTeam() {
   const team: Array<{
     initials: string;
     name: string;
+    photoClassName?: string;
     photo?: string;
     role: string;
     text: string;
@@ -196,6 +197,8 @@ export function MedicalTeam() {
     {
       initials: "IP",
       name: "Ioana Pașca",
+      photo: "/team/ioana-pasca.jpeg",
+      photoClassName: styles.teamPhotoIoana,
       role: "Asistent medical",
       text:
         "Cu o experiență de peste 20 de ani în domeniul pediatriei, Ioana Pașca este un sprijin important pentru copii și familiile acestora. Prin profesionalism, răbdare și empatie, contribuie la crearea unui mediu sigur și prietenos, în care cei mici se simt în largul lor, iar părinții primesc sprijin și îndrumare pe tot parcursul vizitei.",
@@ -217,7 +220,13 @@ export function MedicalTeam() {
             <article className={styles.teamMember} key={member.name}>
               <div className={styles.teamAvatar}>
                 {photo ? (
-                  <Image src={photo} alt={member.name} fill sizes="96px" className={styles.teamPhoto} />
+                  <Image
+                    src={photo}
+                    alt={member.name}
+                    fill
+                    sizes="96px"
+                    className={[styles.teamPhoto, member.photoClassName].filter(Boolean).join(" ")}
+                  />
                 ) : (
                   <>
                     <UserRound size={28} />

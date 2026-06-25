@@ -465,9 +465,14 @@
 }
 
 .teamPhoto {
-  background: #ffffff;
-  object-fit: contain;
-  object-position: center;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.teamPhotoIoana {
+  object-position: center 36%;
+  transform: scale(1.18);
+  transform-origin: center 36%;
 }
 
 .teamAvatar strong {

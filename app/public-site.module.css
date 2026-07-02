@@ -229,6 +229,40 @@
   text-align: center;
 }
 
+.guidesSection {
+  padding-bottom: clamp(30px, 5vw, 56px);
+  padding-top: clamp(30px, 5vw, 56px);
+}
+
+.guidesHero {
+  background: linear-gradient(135deg, #e7f5fb 0%, #eef9f1 100%);
+  border-bottom: 1px solid rgba(41, 126, 168, 0.12);
+  padding: clamp(24px, 4vw, 42px) clamp(18px, 5vw, 72px);
+}
+
+.guidesHero > div {
+  align-items: end;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(0, 0.8fr) minmax(280px, 0.7fr);
+  margin: 0 auto;
+  max-width: 1180px;
+}
+
+.guidesHero h1 {
+  color: #143047;
+  font-size: clamp(34px, 4vw, 52px);
+  line-height: 1.05;
+  margin: 0;
+}
+
+.guidesHero p {
+  color: #4e6a78;
+  font-size: 17px;
+  line-height: 1.55;
+  margin: 0;
+}
+
 .sectionHeader h2,
 .splitSection h2,
 .aboutGrid h2 {
@@ -511,6 +545,9 @@
   border: 1px solid rgba(41, 126, 168, 0.14);
   border-radius: 8px;
   box-shadow: 0 20px 48px rgba(34, 84, 108, 0.08);
+  display: flex;
+  flex-direction: column;
+  min-height: 224px;
   padding: 24px;
 }
 
@@ -519,12 +556,63 @@
   font-size: 24px;
   line-height: 1.2;
   margin: 18px 0 10px;
+  overflow-wrap: anywhere;
 }
 
 .guideCard p {
   color: #4e6a78;
   line-height: 1.65;
   margin: 0 0 18px;
+}
+
+.guideCard .inlineLink {
+  margin-top: auto;
+}
+
+.guideList {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0 auto;
+  max-width: 980px;
+  padding: 0;
+}
+
+.guideListLink {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid rgba(41, 126, 168, 0.14);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(34, 84, 108, 0.06);
+  color: #143047;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  min-height: 58px;
+  padding: 10px 14px;
+}
+
+.guideListLink:hover {
+  border-color: rgba(31, 132, 186, 0.34);
+  color: #1b73a7;
+}
+
+.guideListIcon {
+  align-items: center;
+  background: #e9f8f0;
+  border-radius: 8px;
+  color: #2f9f7f;
+  display: inline-flex;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.guideListTitle {
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .articlePage {
@@ -588,6 +676,39 @@
   gap: 8px;
   margin: 0 0 18px 20px;
   padding: 0;
+}
+
+.documentPage {
+  margin: 0 auto;
+  max-width: 1280px;
+  padding: clamp(34px, 6vw, 82px) clamp(18px, 5vw, 72px);
+}
+
+.documentPage > h1 {
+  color: #143047;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.08;
+  margin: 10px 0 26px;
+  max-width: 1040px;
+  overflow-wrap: anywhere;
+}
+
+.pdfViewerShell {
+  background: #eef6fa;
+  border: 1px solid rgba(41, 126, 168, 0.18);
+  border-radius: 8px;
+  box-shadow: 0 20px 48px rgba(34, 84, 108, 0.1);
+  height: min(76vh, 920px);
+  min-height: 640px;
+  overflow: hidden;
+}
+
+.pdfViewer {
+  background: #ffffff;
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
 }
 
 .pageHero {
@@ -1152,6 +1273,15 @@
   .teamGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .pdfViewerShell {
+    min-height: 560px;
+  }
+
+  .guidesHero > div {
+    align-items: start;
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 680px) {
@@ -1207,6 +1337,11 @@
   .servicesHeroOverlay {
     background:
       linear-gradient(90deg, rgba(251, 248, 241, 0.96) 0%, rgba(231, 245, 251, 0.92) 58%, rgba(104, 199, 144, 0.22) 100%);
+  }
+
+  .pdfViewerShell {
+    height: 72vh;
+    min-height: 480px;
   }
 
   .mapEmbed,

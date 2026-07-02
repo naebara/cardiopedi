@@ -962,6 +962,11 @@
   color: #5c4c25;
 }
 
+.noticeBox div {
+  display: grid;
+  gap: 10px;
+}
+
 .noticeBox p {
   margin: 0;
 }

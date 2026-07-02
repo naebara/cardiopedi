@@ -12,3 +12,6 @@ export const clinic = {
 
 export const appointmentNotice =
   "Fiecare copil merita timpul necesar pentru o evaluare atenta. Desi consultatiile sunt programate la intervale de 30 de minute, unele cazuri necesita mai mult timp pentru investigatii, explicatii si recomandari. Atunci cand este nevoie, aleg sa acord acest timp suplimentar pentru ca fiecare familie sa plece din cabinet cu raspunsuri clare si un plan bine stabilit. Va multumesc pentru rabdare si intelegere in situatia unor eventuale intarzieri ale programului.";
+
+export const appointmentDocumentsNotice =
+  "Vă rugăm ca la consultație să aduceți toate documentele medicale relevante (bilete de externare, investigații, analize, ECG-uri, ecocardiografii, Holtere, scrisori medicale și alte documente anterioare), pentru o evaluare cât mai completă și corectă.";

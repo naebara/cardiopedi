@@ -4,7 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info, Mail, Phone, Send, UserRound, X } from "lucide-react";
 import { createAppointment, type AppointmentFormState } from "@/app/actions/appointments";
-import { appointmentNotice } from "../site-data";
+import { appointmentDocumentsNotice, appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
 
 function toMinutes(value: string) {
@@ -397,7 +397,10 @@ export function BookingForm({
 
       <div className={styles.noticeBox}>
         <Info size={20} />
-        <p>{appointmentNotice}</p>
+        <div>
+          <p>{appointmentNotice}</p>
+          <p>{appointmentDocumentsNotice}</p>
+        </div>
       </div>
 
         <SubmitButton disabled={availableDates.length === 0} />

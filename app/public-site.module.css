@@ -627,7 +627,8 @@
   margin: 0 0 14px;
 }
 
-.articleContent ul {
+.articleContent ul,
+.articleContent ol {
   display: grid;
   gap: 8px;
   margin: 0 0 18px 20px;

@@ -385,8 +385,8 @@ export function BookingForm({
         </label>
 
         <label>
-          <span><Mail size={18} /> Email</span>
-          <input name="email" type="email" placeholder="email@exemplu.ro" />
+          <span><Mail size={18} /> Email optional</span>
+          <input name="email" type="email" placeholder="email@exemplu.ro" autoComplete="email" />
         </label>
       </div>
 
@@ -428,8 +428,8 @@ export function BookingForm({
             <div className={styles.bookingModalIcon}>
               <CheckCircle2 size={32} />
             </div>
-            <h2 id="booking-confirmation-title">Cererea a fost trimisa</h2>
-            <p>Cererea de programare a fost trimisa. Vei primi confirmarea cu detaliile programarii pe email.</p>
+            <h2 id="booking-confirmation-title">Cererea a fost inregistrata</h2>
+            <p>{formState.message}</p>
             <button className={styles.primaryButton} onClick={() => setIsSuccessModalOpen(false)} type="button">
               Am inteles
             </button>

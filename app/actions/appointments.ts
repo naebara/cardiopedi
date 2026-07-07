@@ -267,7 +267,7 @@ export async function createAppointment(
 
   if (!isDateValue(date) || !isTimeValue(time) || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
     return {
-      message: "Completeaza corect data, ora si datele de contact.",
+      message: "Completeaza corect data, ora, telefonul si emailul daca il adaugi.",
       status: "error",
     };
   }
@@ -394,7 +394,9 @@ export async function createAppointment(
   }
 
   return {
-    message: "Cererea de programare a fost trimisa.",
+    message: email
+      ? "Cererea de programare a fost inregistrata. Vei primi confirmarea cu detaliile programarii pe email."
+      : "Cererea de programare a fost inregistrata. Nu ai primit email de confirmare pentru ca nu ai completat adresa de email.",
     status: "success",
   };
 }

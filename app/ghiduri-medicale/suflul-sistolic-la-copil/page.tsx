@@ -14,9 +14,9 @@ export default async function SuflulSistolicPage() {
       <PublicHeader />
       <article className={styles.articlePage}>
         <Link className={styles.inlineLink} href="/ghiduri-medicale">
-          <ArrowLeft size={16} /> Înapoi la ghiduri
+          <ArrowLeft size={16} /> Înapoi la articole
         </Link>
-        <p className={styles.eyebrow}>Ghid medical</p>
+        <p className={styles.eyebrow}>Articol</p>
         <h1>Suflul sistolic la copil - trebuie să ne îngrijorăm?</h1>
         <p className={styles.articleLead}>
           Mulți părinți se sperie atunci când aud pentru prima dată că medicul a identificat un suflu cardiac

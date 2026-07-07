@@ -7,6 +7,8 @@ import { createAppointment, type AppointmentFormState } from "@/app/actions/appo
 import { appointmentDocumentsNotice, appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
 
+const CLINIC_TIME_ZONE = "Europe/Bucharest";
+
 function toMinutes(value: string) {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
@@ -18,6 +20,35 @@ function toTime(value: number) {
 
 function dateValue(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function dateFromValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function getClinicNow(reference = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: CLINIC_TIME_ZONE,
+    year: "numeric",
+  }).formatToParts(reference);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  const hour = Number(part("hour"));
+  const minute = Number(part("minute"));
+
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    minutes: hour * 60 + minute,
+  };
+}
+
+function isPastAppointmentSlot(date: string, time: string, clinicNow: ReturnType<typeof getClinicNow>) {
+  return date < clinicNow.date || (date === clinicNow.date && toMinutes(time) <= clinicNow.minutes);
 }
 
 function labelDate(date: Date) {
@@ -138,6 +169,8 @@ export function BookingForm({
   const formRef = useRef<HTMLFormElement>(null);
   const datePickerRef = useRef<HTMLDivElement>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  const clinicNow = useMemo(() => getClinicNow(now), [now]);
   const occupiedSlotValues = useMemo(() => new Set(occupiedSlots.map((slot) => `${slot.date}|${slot.time}`)), [occupiedSlots]);
   const scheduleByWeekday = useMemo(() => {
     return schedule.reduce<Record<number, BookingScheduleOption[]>>((acc, slot) => {
@@ -148,7 +181,7 @@ export function BookingForm({
 
   const availableDates = useMemo(() => {
     const dates = [];
-    const today = new Date();
+    const today = dateFromValue(clinicNow.date);
 
     for (let offset = 0; offset < 90; offset += 1) {
       const date = new Date(today);
@@ -158,7 +191,9 @@ export function BookingForm({
       const daySlots = (scheduleByWeekday[date.getDay()] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin));
 
       const freeSlots = daySlots.filter((slot) => {
-        return !occupiedSlotValues.has(`${value}|${slot}`) && !isSlotBlocked(blockedPeriods, value, slot);
+        return !isPastAppointmentSlot(value, slot, clinicNow)
+          && !occupiedSlotValues.has(`${value}|${slot}`)
+          && !isSlotBlocked(blockedPeriods, value, slot);
       });
 
       if (freeSlots.length) {
@@ -171,7 +206,7 @@ export function BookingForm({
     }
 
     return dates;
-  }, [blockedPeriods, occupiedSlotValues, scheduleByWeekday]);
+  }, [blockedPeriods, clinicNow, occupiedSlotValues, scheduleByWeekday]);
 
   const [selectedDate, setSelectedDate] = useState("");
   const [phone, setPhone] = useState("");
@@ -182,11 +217,23 @@ export function BookingForm({
   });
   const availableDateValues = useMemo(() => new Set(availableDates.map((date) => date.value)), [availableDates]);
   const selectedDateMeta = availableDates.find((date) => date.value === selectedDate);
-  const slots = selectedDateMeta
-    ? (scheduleByWeekday[selectedDateMeta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
-      .filter((slot) => !occupiedSlotValues.has(`${selectedDateMeta.value}|${slot}`) && !isSlotBlocked(blockedPeriods, selectedDateMeta.value, slot))
-    : [];
+  const slots = useMemo(() => {
+    if (!selectedDateMeta) {
+      return [];
+    }
+
+    return (scheduleByWeekday[selectedDateMeta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
+      .filter((slot) => !isPastAppointmentSlot(selectedDateMeta.value, slot, clinicNow)
+        && !occupiedSlotValues.has(`${selectedDateMeta.value}|${slot}`)
+        && !isSlotBlocked(blockedPeriods, selectedDateMeta.value, slot));
+  }, [blockedPeriods, clinicNow, occupiedSlotValues, scheduleByWeekday, selectedDateMeta]);
   const [selectedTime, setSelectedTime] = useState("");
+  const selectedTimeValue = selectedTime && slots.includes(selectedTime) ? selectedTime : (slots[0] ?? "");
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!isDatePickerOpen) {
@@ -205,12 +252,7 @@ export function BookingForm({
 
   function onDateChange(value: string) {
     setSelectedDate(value);
-    const meta = availableDates.find((date) => date.value === value);
-    const nextSlots = meta
-      ? (scheduleByWeekday[meta.weekday] ?? []).flatMap((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin))
-        .filter((slot) => !occupiedSlotValues.has(`${meta.value}|${slot}`) && !isSlotBlocked(blockedPeriods, meta.value, slot))
-      : [];
-    setSelectedTime(nextSlots[0] ?? "");
+    setSelectedTime("");
   }
 
   const selectedDateLabel = selectedDateMeta?.label ?? "";
@@ -342,7 +384,7 @@ export function BookingForm({
 
         <label>
           <span><Clock size={18} /> Ora</span>
-          <select name="time" value={selectedTime} onChange={(event) => setSelectedTime(event.target.value)} required disabled={!selectedDate}>
+          <select name="time" value={selectedTimeValue} onChange={(event) => setSelectedTime(event.target.value)} required disabled={!selectedDate}>
             {!selectedDate ? <option value="">{availableDates.length === 0 ? "Nu exista program disponibil" : "Alege mai intai data"}</option> : null}
             {slots.map((slot) => (
               <option key={slot} value={slot}>

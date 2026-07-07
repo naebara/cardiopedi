@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { formatScheduleDate } from "@/lib/schedule";
 import { clinic } from "../site-data";
 
+const CLINIC_TIME_ZONE = "Europe/Bucharest";
+
 type AppointmentEmailData = {
   childName: string;
   childAge: string;
@@ -46,6 +48,30 @@ function isEmailValue(value: string) {
 
 function dateFromValue(value: string) {
   return new Date(`${value}T00:00:00.000Z`);
+}
+
+function getClinicNow(reference = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: CLINIC_TIME_ZONE,
+    year: "numeric",
+  }).formatToParts(reference);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  const hour = Number(part("hour"));
+  const minute = Number(part("minute"));
+
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    minutes: hour * 60 + minute,
+  };
+}
+
+function isPastAppointmentSlot(date: string, time: string, clinicNow = getClinicNow()) {
+  return date < clinicNow.date || (date === clinicNow.date && toMinutes(time) <= clinicNow.minutes);
 }
 
 function weekdayFromDateValue(value: string) {
@@ -268,6 +294,13 @@ export async function createAppointment(
   if (!isDateValue(date) || !isTimeValue(time) || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
     return {
       message: "Completeaza corect data, ora, telefonul si emailul daca il adaugi.",
+      status: "error",
+    };
+  }
+
+  if (isPastAppointmentSlot(date, time)) {
+    return {
+      message: "Ora aleasa a trecut deja. Alege urmatorul interval disponibil.",
       status: "error",
     };
   }

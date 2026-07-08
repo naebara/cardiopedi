@@ -69,11 +69,11 @@ export default function ForgotPasswordView() {
 
         <div className={classes.coverPanel}>
           <Image
-            alt="Clinica pediatrica moderna Cardiopedi"
+            alt="Cabinet modern de cardiologie pediatrica"
             className={classes.coverImage}
             fill
             priority
-            src="/cardiopedi-login-cover.png"
+            src="/cardiopedi-clinic-hero.png"
             sizes="(max-width: 900px) 100vw, 54vw"
           />
           <div className={classes.coverOverlay} />

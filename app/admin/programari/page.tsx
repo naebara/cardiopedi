@@ -1,12 +1,13 @@
 import { canAccess, requireFeature } from "@/lib/admin-features";
 import { getAdminAppointments } from "@/lib/appointments";
-import { getPublicScheduleSlots } from "@/lib/schedule";
+import { getPublicBlockedDates, getPublicScheduleSlots } from "@/lib/schedule";
 import { AppointmentsPanel } from "./AppointmentsPanel";
 
 export default async function AdminAppointmentsPage() {
   const currentUser = await requireFeature("appointments.view");
-  const [appointments, scheduleSlots] = await Promise.all([
+  const [appointments, blockedPeriods, scheduleSlots] = await Promise.all([
     getAdminAppointments(),
+    getPublicBlockedDates(),
     getPublicScheduleSlots(),
   ]);
 
@@ -14,6 +15,12 @@ export default async function AdminAppointmentsPage() {
     <>
       <AppointmentsPanel
         appointments={appointments}
+        blockedPeriods={blockedPeriods.map((period) => ({
+          date: period.date,
+          endDate: period.endDate,
+          endTime: period.endTime,
+          startTime: period.startTime,
+        }))}
         canManageAppointments={canAccess(currentUser, "appointments.manage")}
         scheduleSlots={scheduleSlots.map((slot) => ({
           dayOfWeek: slot.dayOfWeek,

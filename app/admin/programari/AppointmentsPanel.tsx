@@ -7,6 +7,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, List as ListIcon, Search } fro
 import { AdminCalendarGrid } from "./components/AdminCalendarGrid";
 import { AdminMonthGrid } from "./components/AdminMonthGrid";
 import { AdminAppointmentsList, type Appointment } from "./components/AdminAppointmentsList";
+import { AdminCreateAppointmentModal, type AdminAppointmentDraftSlot } from "./components/AdminCreateAppointmentModal";
 import { AppointmentDetailsModal, AppointmentDetailsPanel } from "./components/AppointmentDetailsModal";
 import { dateValue, getDatesOfWeek, monthLabel } from "./lib/admin-calendar-utils";
 import styles from "./programari.module.css";
@@ -20,6 +21,13 @@ export type AppointmentScheduleSlot = {
   startTime: string;
   endTime: string;
   durationMin: number;
+};
+
+export type AppointmentBlockedPeriod = {
+  date: string;
+  endDate: string;
+  startTime: string | null;
+  endTime: string | null;
 };
 
 function appointmentMatchesSearch(appointment: Appointment, search: string) {
@@ -44,10 +52,12 @@ function appointmentMatchesSearch(appointment: Appointment, search: string) {
 
 export function AppointmentsPanel({
   appointments,
+  blockedPeriods,
   canManageAppointments,
   scheduleSlots,
 }: {
   appointments: Appointment[];
+  blockedPeriods: AppointmentBlockedPeriod[];
   canManageAppointments: boolean;
   scheduleSlots: AppointmentScheduleSlot[];
 }) {
@@ -55,6 +65,7 @@ export function AppointmentsPanel({
   const [period, setPeriod] = useState<Period>("week");
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draftSlot, setDraftSlot] = useState<AdminAppointmentDraftSlot | null>(null);
   const [search, setSearch] = useState("");
   const isDesktop = useMediaQuery("(min-width: 1024px)", false);
   const useCalendarSplit = mode === "calendar" && period !== "month" && isDesktop;
@@ -97,6 +108,11 @@ export function AppointmentsPanel({
   function changeMode(value: string) {
     setSelectedId(null);
     setMode(value as Mode);
+  }
+
+  function openDraftSlot(slot: AdminAppointmentDraftSlot) {
+    setSelectedId(null);
+    setDraftSlot(slot);
   }
 
   const periodLabel = useMemo(() => {
@@ -225,9 +241,11 @@ export function AppointmentsPanel({
             <div className={styles.daySplitCalendar}>
               <AdminCalendarGrid
                 appointments={filteredAppointments}
+                blockedPeriods={blockedPeriods}
                 canManageAppointments={canManageAppointments}
                 currentDate={currentDate}
                 occupiedAppointments={appointments}
+                onCreateSlot={openDraftSlot}
                 onSelect={(appointment) => setSelectedId(appointment.id)}
                 scheduleSlots={scheduleSlots}
                 selectedAppointmentId={selectedId}
@@ -246,9 +264,11 @@ export function AppointmentsPanel({
           <div className={styles.calendarScroll}>
             <AdminCalendarGrid
               appointments={filteredAppointments}
+              blockedPeriods={blockedPeriods}
               canManageAppointments={canManageAppointments}
               currentDate={currentDate}
               occupiedAppointments={appointments}
+              onCreateSlot={openDraftSlot}
               onSelect={(appointment) => setSelectedId(appointment.id)}
               scheduleSlots={scheduleSlots}
               selectedAppointmentId={selectedId}
@@ -260,6 +280,13 @@ export function AppointmentsPanel({
 
       {!useCalendarSplit ? (
         <AppointmentDetailsModal appointment={selected} canManageAppointments={canManageAppointments} onClose={() => setSelectedId(null)} />
+      ) : null}
+      {draftSlot ? (
+        <AdminCreateAppointmentModal
+          key={`${draftSlot.date}-${draftSlot.time}`}
+          onClose={() => setDraftSlot(null)}
+          slot={draftSlot}
+        />
       ) : null}
     </div>
   );

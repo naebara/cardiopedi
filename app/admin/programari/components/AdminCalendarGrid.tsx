@@ -3,7 +3,8 @@ import { useRouter } from "next/navigation";
 import { Box, Text } from "@mantine/core";
 import { rescheduleAppointment } from "@/app/admin/actions";
 import { dateValue, getDatesOfWeek, labelDateShort, calculateEventPosition, toMinutes } from "../lib/admin-calendar-utils";
-import type { AppointmentScheduleSlot } from "../AppointmentsPanel";
+import type { AppointmentBlockedPeriod, AppointmentScheduleSlot } from "../AppointmentsPanel";
+import type { AdminAppointmentDraftSlot } from "./AdminCreateAppointmentModal";
 import type { Appointment } from "./AdminAppointmentsList";
 import styles from "../programari.module.css";
 
@@ -11,13 +12,16 @@ interface AdminCalendarGridProps {
   currentDate: Date; // represents the day or week we are looking at
   view: "day" | "week";
   appointments: Appointment[];
+  blockedPeriods: AppointmentBlockedPeriod[];
   canManageAppointments: boolean;
   occupiedAppointments: Appointment[];
+  onCreateSlot?: (slot: AdminAppointmentDraftSlot) => void;
   onSelect?: (appointment: Appointment) => void;
   scheduleSlots: AppointmentScheduleSlot[];
   selectedAppointmentId?: string | null;
 }
 
+const CLINIC_TIME_ZONE = "Europe/Bucharest";
 const START_HOUR = 8;
 const END_HOUR = 20;
 const PIXELS_PER_HOUR = 60; // 60px height per hour => 1 minute = 1px
@@ -36,11 +40,51 @@ function buildSlots(start: string, end: string, durationMin: number) {
   return slots;
 }
 
+function getClinicNow(reference = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    month: "2-digit",
+    timeZone: CLINIC_TIME_ZONE,
+    year: "numeric",
+  }).formatToParts(reference);
+  const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? "";
+  const hour = Number(part("hour"));
+  const minute = Number(part("minute"));
+
+  return {
+    date: `${part("year")}-${part("month")}-${part("day")}`,
+    minutes: hour * 60 + minute,
+  };
+}
+
+function isPastAppointmentSlot(date: string, time: string, clinicNow: ReturnType<typeof getClinicNow>) {
+  return date < clinicNow.date || (date === clinicNow.date && toMinutes(time) <= clinicNow.minutes);
+}
+
+function isSlotBlocked(periods: AppointmentBlockedPeriod[], date: string, time: string) {
+  return periods.some((period) => {
+    if (date < period.date || date > period.endDate) {
+      return false;
+    }
+
+    if (!period.startTime || !period.endTime || period.date !== period.endDate) {
+      return true;
+    }
+
+    return time >= period.startTime && time < period.endTime;
+  });
+}
+
 export function AdminCalendarGrid({
   appointments,
+  blockedPeriods,
   canManageAppointments,
   currentDate,
   occupiedAppointments,
+  onCreateSlot,
   onSelect,
   scheduleSlots,
   selectedAppointmentId,
@@ -53,6 +97,7 @@ export function AdminCalendarGrid({
   const draggedAppointmentIdRef = useRef<string | null>(null);
   const suppressNextClickRef = useRef(false);
   const dates = view === "day" ? [currentDate] : getDatesOfWeek(currentDate);
+  const clinicNow = useMemo(() => getClinicNow(), []);
   const activeScheduleSlots = scheduleSlots.filter((slot) => {
     const startMinutes = toMinutes(slot.startTime);
     const endMinutes = toMinutes(slot.endTime);
@@ -75,10 +120,10 @@ export function AdminCalendarGrid({
     });
   }, []);
 
-  function isTimeInsideSchedule(date: Date, time: string) {
+  function getMatchingScheduleSlot(date: Date, time: string) {
     return activeScheduleSlots
       .filter((slot) => slot.dayOfWeek === date.getDay())
-      .some((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin).includes(time));
+      .find((slot) => buildSlots(slot.startTime, slot.endTime, slot.durationMin).includes(time));
   }
 
   function onDragStart(event: DragEvent<HTMLDivElement>, appointment: Appointment) {
@@ -205,12 +250,15 @@ export function AdminCalendarGrid({
           {dates.map((date) => {
             const val = dateValue(date);
             const dayAppointments = groupedByDate.get(val) || [];
-            const dayDropSlots = visibleGridSlots.map((time) => ({
-              durationMin: DROP_SLOT_DURATION_MIN,
-              id: `${val}-${time}`,
-              isOutsideSchedule: !isTimeInsideSchedule(date, time),
-              time,
-            }));
+            const dayDropSlots = visibleGridSlots.map((time) => {
+              const matchingScheduleSlot = getMatchingScheduleSlot(date, time);
+              return {
+                durationMin: matchingScheduleSlot?.durationMin ?? DROP_SLOT_DURATION_MIN,
+                id: `${val}-${time}`,
+                isOutsideSchedule: !matchingScheduleSlot,
+                time,
+              };
+            });
             const dayScheduleRanges = activeScheduleSlots
               .filter((slot) => slot.dayOfWeek === date.getDay())
               .map((slot) => {
@@ -251,16 +299,29 @@ export function AdminCalendarGrid({
 
                   const { top, height } = calculateEventPosition(slot.time, slot.durationMin, START_HOUR, PIXELS_PER_HOUR);
                   const isActiveTarget = dragTarget?.date === val && dragTarget.time === slot.time;
+                  const isBlocked = isSlotBlocked(blockedPeriods, val, slot.time);
+                  const isPast = isPastAppointmentSlot(val, slot.time, clinicNow);
+                  const isBookable = Boolean(onCreateSlot) && !slot.isOutsideSchedule && !isBlocked && !isPast;
 
                   return (
                     <div
-                      aria-label={`Muta programarea la ${val} ${slot.time}`}
+                      aria-disabled={!isBookable}
+                      aria-label={isBookable ? `Creeaza programare la ${val} ${slot.time}` : `Interval indisponibil la ${val} ${slot.time}`}
                       className={[
                         styles.availableDropSlot,
+                        isBookable ? styles.bookableDropSlot : "",
+                        isBlocked || isPast ? styles.unavailableDropSlot : "",
                         slot.isOutsideSchedule ? styles.exceptionDropSlot : "",
                         isActiveTarget ? styles.activeDropSlot : "",
                       ].filter(Boolean).join(" ")}
                       key={slot.id}
+                      onClick={() => {
+                        if (!isBookable || isDragging || isPending) {
+                          return;
+                        }
+
+                        onCreateSlot?.({ date: val, durationMin: slot.durationMin, time: slot.time });
+                      }}
                       onDragEnter={() => setDragTarget({ date: val, isOutsideSchedule: slot.isOutsideSchedule, time: slot.time })}
                       onDragLeave={() => setDragTarget((current) => (current?.date === val && current.time === slot.time ? null : current))}
                       onDragOver={(event) => {
@@ -268,10 +329,20 @@ export function AdminCalendarGrid({
                         event.dataTransfer.dropEffect = "move";
                       }}
                       onDrop={(event) => onDrop(event, val, slot.time, slot.isOutsideSchedule)}
+                      onKeyDown={(event) => {
+                        if (!isBookable || isDragging || isPending || (event.key !== "Enter" && event.key !== " ")) {
+                          return;
+                        }
+
+                        event.preventDefault();
+                        onCreateSlot?.({ date: val, durationMin: slot.durationMin, time: slot.time });
+                      }}
+                      role={isBookable ? "button" : undefined}
                       style={{
                         height: `${height}px`,
                         top: `${top}px`,
                       }}
+                      tabIndex={isBookable ? 0 : undefined}
                     />
                   );
                 }) : null}

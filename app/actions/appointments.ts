@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { requireFeature } from "@/lib/admin-features";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { formatScheduleDate } from "@/lib/schedule";
@@ -105,6 +106,11 @@ function formatAppointmentDate(value: string) {
 }
 
 const DEFAULT_APPOINTMENT_SERVICE = "Programare";
+
+type CreateAppointmentOptions = {
+  ownerId?: string | null;
+  source?: "admin" | "public";
+};
 
 function appointmentNotificationText(appointment: AppointmentEmailData) {
   return [
@@ -278,10 +284,7 @@ async function getAppointmentNotificationRecipients() {
   return rows.map((row) => row.email).filter(Boolean);
 }
 
-export async function createAppointment(
-  _previousState: AppointmentFormState,
-  formData: FormData,
-): Promise<AppointmentFormState> {
+async function createAppointmentFromForm(formData: FormData, options: CreateAppointmentOptions = {}): Promise<AppointmentFormState> {
   const date = textValue(formData, "date");
   const time = textValue(formData, "time");
   const parentName = textValue(formData, "parentName");
@@ -374,6 +377,7 @@ export async function createAppointment(
         "phone",
         "email",
         "notes",
+        "ownerId",
         "updatedAt"
       )
       VALUES (
@@ -388,6 +392,7 @@ export async function createAppointment(
         ${phone},
         ${email || null},
         ${notes || null},
+        ${options.ownerId ?? null},
         NOW()
       )
     `;
@@ -428,8 +433,27 @@ export async function createAppointment(
 
   return {
     message: email
-      ? "Cererea de programare a fost inregistrata. Vei primi confirmarea cu detaliile programarii pe email."
-      : "Cererea de programare a fost inregistrata. Nu ai primit email de confirmare pentru ca nu ai completat adresa de email.",
+      ? options.source === "admin"
+        ? "Programarea a fost inregistrata. Parintele va primi confirmarea cu detaliile programarii pe email."
+        : "Cererea de programare a fost inregistrata. Vei primi confirmarea cu detaliile programarii pe email."
+      : options.source === "admin"
+        ? "Programarea a fost inregistrata. Parintele nu a primit email de confirmare pentru ca nu a fost completata adresa de email."
+        : "Cererea de programare a fost inregistrata. Nu ai primit email de confirmare pentru ca nu ai completat adresa de email.",
     status: "success",
   };
+}
+
+export async function createAppointment(
+  _previousState: AppointmentFormState,
+  formData: FormData,
+): Promise<AppointmentFormState> {
+  return createAppointmentFromForm(formData, { source: "public" });
+}
+
+export async function createAdminAppointment(
+  _previousState: AppointmentFormState,
+  formData: FormData,
+): Promise<AppointmentFormState> {
+  const currentUser = await requireFeature("appointments.manage");
+  return createAppointmentFromForm(formData, { ownerId: currentUser.id, source: "admin" });
 }

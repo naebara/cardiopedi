@@ -428,7 +428,7 @@ export function BookingForm({
 
         <label>
           <span><Mail size={18} /> Email optional</span>
-          <input name="email" type="email" placeholder="email@exemplu.ro" autoComplete="email" />
+          <input name="email" type="email" placeholder="email@exemplu.ro" autoComplete="off" />
         </label>
       </div>
 

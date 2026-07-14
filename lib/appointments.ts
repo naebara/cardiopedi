@@ -84,6 +84,7 @@ export async function getAdminAppointments() {
       "status"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
     ORDER BY "date" ASC, "time" ASC
   `;
 
@@ -100,6 +101,7 @@ export async function getOccupiedAppointmentSlots() {
     SELECT "date", "time"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
     ORDER BY "date" ASC, "time" ASC
   `;
 
@@ -131,6 +133,7 @@ export async function getAdminPatients() {
       a."time"
     FROM "Appointment" a
     WHERE a."status" IN ('NEW', 'CONFIRMED')
+      AND a."deletedAt" IS NULL
     ORDER BY LOWER(TRIM(a."childName")) ASC, a."date" ASC, a."time" ASC
   `;
 
@@ -162,6 +165,7 @@ export async function getAdminPatientDetails(appointmentId: string): Promise<Adm
       "status"
     FROM "Appointment" a
     WHERE a."id" = ${appointmentId}
+      AND a."deletedAt" IS NULL
     LIMIT 1
   `;
 

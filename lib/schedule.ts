@@ -181,6 +181,7 @@ export async function getActiveAppointmentCountsByDate() {
     SELECT "date", "time"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
       AND "date" >= CURRENT_DATE
     ORDER BY "date" ASC
   `;
@@ -199,6 +200,7 @@ export async function getActiveAppointmentSlotsForBlocking() {
     SELECT "date", "time"
     FROM "Appointment"
     WHERE "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
       AND "date" >= CURRENT_DATE
     ORDER BY "date" ASC, "time" ASC
   `;

@@ -68,7 +68,7 @@ export function DeletePatientRecordButton({ compact = false, appointmentId, pati
               <div>
                 <h2>Sterge pacientul?</h2>
                 <p>
-                  Fisa pentru {patientName} si programarea asociata vor fi sterse definitiv.
+                  Fisa pentru {patientName} si programarea asociata vor fi sterse.
                   Programarea va disparea din calendar, iar slotul va redeveni disponibil.
                 </p>
               </div>
@@ -84,7 +84,7 @@ export function DeletePatientRecordButton({ compact = false, appointmentId, pati
                 Renunta
               </button>
               <button className={styles.dangerButton} disabled={isPending} onClick={confirmDelete} type="button">
-                {isPending ? "Se sterge..." : "Sterge definitiv"}
+                {isPending ? "Se sterge..." : "Sterge"}
               </button>
             </div>
           </div>

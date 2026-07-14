@@ -351,6 +351,7 @@ async function createAppointmentFromForm(formData: FormData, options: CreateAppo
     WHERE "date" = ${appointmentDate}
       AND "time" = ${time}
       AND "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
     LIMIT 1
   `;
 

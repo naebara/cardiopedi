@@ -288,7 +288,7 @@ export async function updateUserAccess(formData: FormData): Promise<UpdateUserAc
 }
 
 export async function deletePatientRecord(appointmentIdValue: string): Promise<DeletePatientRecordState> {
-  await requireFeature("patients.manage");
+  const currentUser = await requireFeature("patients.manage");
   const appointmentId = String(appointmentIdValue ?? "").trim();
 
   if (!appointmentId) {
@@ -299,8 +299,13 @@ export async function deletePatientRecord(appointmentIdValue: string): Promise<D
   }
 
   const deletedRecords = await prisma.$queryRaw<Array<{ id: string }>>`
-    DELETE FROM "Appointment"
+    UPDATE "Appointment"
+    SET
+      "deletedAt" = NOW(),
+      "deletedBy" = ${currentUser.id},
+      "updatedAt" = NOW()
     WHERE "id" = ${appointmentId}
+      AND "deletedAt" IS NULL
     RETURNING "id"
   `;
 
@@ -318,7 +323,7 @@ export async function deletePatientRecord(appointmentIdValue: string): Promise<D
   revalidatePath(`/admin/pacienti/${appointmentId}`);
 
   return {
-    message: "Pacientul si programarea asociata au fost sterse definitiv.",
+    message: "Pacientul si programarea asociata au fost sterse.",
     status: "success",
   };
 }
@@ -857,6 +862,7 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
     FROM "Appointment"
     WHERE "date" BETWEEN ${blockedDate} AND ${blockedEndDate}
       AND "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
       AND (
         ${hasPartialTime} = false
         OR ("time" >= ${startTime} AND "time" < ${endTime})
@@ -923,6 +929,7 @@ export async function confirmAppointment(appointmentId: string) {
     UPDATE "Appointment"
     SET "status" = 'CONFIRMED', "updatedAt" = NOW()
     WHERE "id" = ${id}
+      AND "deletedAt" IS NULL
   `;
 
   revalidatePath("/admin");
@@ -942,6 +949,7 @@ export async function deleteAppointment(appointmentId: string) {
     UPDATE "Appointment"
     SET "status" = 'CANCELLED', "updatedAt" = NOW()
     WHERE "id" = ${id}
+      AND "deletedAt" IS NULL
   `;
 
   revalidatePath("/");
@@ -965,6 +973,7 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
     SELECT "durationMin", "id", "status"
     FROM "Appointment"
     WHERE "id" = ${id}
+      AND "deletedAt" IS NULL
     LIMIT 1
   `;
 
@@ -1009,6 +1018,7 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
     WHERE "date" = ${appointmentDate}
       AND "time" = ${nextTime}
       AND "status" <> 'CANCELLED'
+      AND "deletedAt" IS NULL
       AND "id" <> ${id}
     LIMIT 1
   `;
@@ -1025,6 +1035,7 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
       "durationMin" = ${matchingScheduleSlot?.durationMin ?? appointment[0].durationMin},
       "updatedAt" = NOW()
     WHERE "id" = ${id}
+      AND "deletedAt" IS NULL
   `;
 
   revalidatePath("/");

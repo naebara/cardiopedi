@@ -3,16 +3,16 @@
 import { MouseEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "lucide-react";
-import { softDeletePatient } from "@/app/admin/actions";
+import { deletePatientRecord } from "@/app/admin/actions";
 import styles from "../admin.module.css";
 
-type DeletePatientButtonProps = {
+type DeletePatientRecordButtonProps = {
   compact?: boolean;
-  patientId: string;
+  appointmentId: string;
   patientName: string;
 };
 
-export function DeletePatientButton({ compact = false, patientId, patientName }: DeletePatientButtonProps) {
+export function DeletePatientRecordButton({ compact = false, appointmentId, patientName }: DeletePatientRecordButtonProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,7 +35,7 @@ export function DeletePatientButton({ compact = false, patientId, patientName }:
 
   function confirmDelete() {
     startTransition(async () => {
-      const result = await softDeletePatient(patientId);
+      const result = await deletePatientRecord(appointmentId);
 
       if (result.status === "success") {
         setIsOpen(false);
@@ -68,8 +68,8 @@ export function DeletePatientButton({ compact = false, patientId, patientName }:
               <div>
                 <h2>Sterge pacientul?</h2>
                 <p>
-                  Pacientul {patientName} si programarile lui nu vor mai aparea in UI.
-                  Datele raman salvate in baza de date.
+                  Fisa pentru {patientName} si programarea asociata vor fi sterse definitiv.
+                  Programarea va disparea din calendar, iar slotul va redeveni disponibil.
                 </p>
               </div>
               <button aria-label="Inchide" className={styles.iconButton} onClick={closeModal} type="button">
@@ -84,7 +84,7 @@ export function DeletePatientButton({ compact = false, patientId, patientName }:
                 Renunta
               </button>
               <button className={styles.dangerButton} disabled={isPending} onClick={confirmDelete} type="button">
-                {isPending ? "Se sterge..." : "Sterge pacientul"}
+                {isPending ? "Se sterge..." : "Sterge definitiv"}
               </button>
             </div>
           </div>

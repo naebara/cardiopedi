@@ -18,13 +18,13 @@ export const ADMIN_FEATURES = [
   {
     key: "patients.view",
     name: "Vizualizare pacienti",
-    description: "Poate vedea lista de pacienti si parinti.",
+    description: "Poate vedea fisele individuale asociate programarilor.",
     category: "Pacienti",
   },
   {
     key: "patients.manage",
     name: "Gestionare pacienti",
-    description: "Poate modifica datele pacientilor.",
+    description: "Poate sterge fise si programarile asociate.",
     category: "Pacienti",
   },
   {

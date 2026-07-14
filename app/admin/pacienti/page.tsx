@@ -12,8 +12,11 @@ export default async function AdminPatientsPage() {
       <header className={styles.pageHeader}>
         <div>
           <h1>Pacienti</h1>
-          <p>Lista cu pacientii care au programari noi sau confirmate.</p>
+          <p>Fiecare rand reprezinta o singura programare noua sau confirmata.</p>
         </div>
+        <span className={styles.badge}>
+          {patients.length} {patients.length === 1 ? "pacient" : "pacienti"}
+        </span>
       </header>
 
       <PatientsTable canManagePatients={canAccess(currentUser, "patients.manage")} patients={patients} />

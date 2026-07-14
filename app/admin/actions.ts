@@ -23,7 +23,7 @@ export type AccountPasswordState = {
   status: "error" | "idle" | "success";
 };
 
-export type SoftDeletePatientState = {
+export type DeletePatientRecordState = {
   message: string;
   status: "error" | "idle" | "success";
 };
@@ -47,10 +47,6 @@ const accountPasswordSchema = z.object({
   message: "Parolele nu coincid",
   path: ["confirmPassword"],
 });
-
-function normalizedPatientName(value: string) {
-  return value.trim().toLocaleLowerCase("ro-RO");
-}
 
 function escapeHtml(value: string) {
   return value
@@ -291,50 +287,38 @@ export async function updateUserAccess(formData: FormData): Promise<UpdateUserAc
   };
 }
 
-export async function softDeletePatient(patientId: string): Promise<SoftDeletePatientState> {
-  const currentUser = await requireFeature("patients.manage");
-  const appointmentId = String(patientId ?? "").trim();
+export async function deletePatientRecord(appointmentIdValue: string): Promise<DeletePatientRecordState> {
+  await requireFeature("patients.manage");
+  const appointmentId = String(appointmentIdValue ?? "").trim();
 
   if (!appointmentId) {
     return {
-      message: "Pacient invalid.",
+      message: "Fisa selectata este invalida.",
       status: "error",
     };
   }
 
-  const appointments = await prisma.$queryRaw<Array<{ childName: string }>>`
-    SELECT "childName"
-    FROM "Appointment"
+  const deletedRecords = await prisma.$queryRaw<Array<{ id: string }>>`
+    DELETE FROM "Appointment"
     WHERE "id" = ${appointmentId}
-    LIMIT 1
+    RETURNING "id"
   `;
-  const appointment = appointments[0];
 
-  if (!appointment?.childName.trim()) {
+  if (!deletedRecords[0]) {
     return {
-      message: "Pacientul nu a fost gasit.",
+      message: "Fisa nu a fost gasita sau a fost deja stearsa.",
       status: "error",
     };
   }
 
-  const normalizedName = normalizedPatientName(appointment.childName);
-
-  await prisma.$executeRaw`
-    INSERT INTO "DeletedPatient" ("id", "normalizedName", "displayName", "deletedBy")
-    VALUES (${crypto.randomUUID()}, ${normalizedName}, ${appointment.childName.trim()}, ${currentUser.id})
-    ON CONFLICT ("normalizedName") DO UPDATE SET
-      "displayName" = EXCLUDED."displayName",
-      "deletedAt" = NOW(),
-      "deletedBy" = EXCLUDED."deletedBy"
-  `;
-
+  revalidatePath("/programari");
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
   revalidatePath("/admin/pacienti");
   revalidatePath(`/admin/pacienti/${appointmentId}`);
 
   return {
-    message: "Pacientul a fost ascuns din UI.",
+    message: "Pacientul si programarea asociata au fost sterse definitiv.",
     status: "success",
   };
 }

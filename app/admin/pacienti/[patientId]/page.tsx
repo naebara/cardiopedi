@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Baby, CalendarDays, Mail, Phone, UserRound } from "lucide-react";
 import { canAccess, requireFeature } from "@/lib/admin-features";
 import { getAdminPatientDetails } from "@/lib/appointments";
-import { DeletePatientButton } from "../DeletePatientButton";
+import { DeletePatientRecordButton } from "../DeletePatientRecordButton";
 import { PatientHistoryTable } from "./PatientHistoryTable";
 import styles from "../../admin.module.css";
 
@@ -14,9 +14,9 @@ export default async function AdminPatientDetailsPage({
 }) {
   const currentUser = await requireFeature("patients.view");
   const { patientId } = await params;
-  const patient = await getAdminPatientDetails(patientId);
+  const appointment = await getAdminPatientDetails(patientId);
 
-  if (!patient) {
+  if (!appointment) {
     notFound();
   }
 
@@ -28,11 +28,11 @@ export default async function AdminPatientDetailsPage({
             <ArrowLeft size={17} />
             Inapoi la pacienti
           </Link>
-          <h1>{patient.childName}</h1>
-          <p>Detalii generale si istoricul programarilor pentru pacient.</p>
+          <h1>{appointment.childName}</h1>
+          <p>Fisa individuala asociata programarii selectate.</p>
         </div>
         {canAccess(currentUser, "patients.manage") ? (
-          <DeletePatientButton patientId={patientId} patientName={patient.childName} />
+          <DeletePatientRecordButton appointmentId={appointment.id} patientName={appointment.childName} />
         ) : null}
       </header>
 
@@ -43,35 +43,35 @@ export default async function AdminPatientDetailsPage({
             <div>
               <Baby size={18} />
               <span>Varsta</span>
-              <strong>{patient.childAges.join(", ") || "-"}</strong>
+              <strong>{appointment.childAge || "-"}</strong>
             </div>
             <div>
               <UserRound size={18} />
-              <span>Parinti / apartinatori</span>
-              <strong>{patient.parentNames.join(", ") || "-"}</strong>
+              <span>Parinte / apartinator</span>
+              <strong>{appointment.parentName || "-"}</strong>
             </div>
             <div>
               <Phone size={18} />
               <span>Telefon</span>
-              <strong>{patient.phones.join(", ") || "-"}</strong>
+              <strong>{appointment.phone || "-"}</strong>
             </div>
             <div>
               <Mail size={18} />
               <span>Email</span>
-              <strong>{patient.emails.join(", ") || "-"}</strong>
+              <strong>{appointment.email || "-"}</strong>
             </div>
             <div>
               <CalendarDays size={18} />
-              <span>Programari totale</span>
-              <strong>{patient.appointments.length}</strong>
+              <span>Programare</span>
+              <strong>{appointment.day}, {appointment.date} · {appointment.time}</strong>
             </div>
           </div>
         </article>
       </section>
 
       <section className={styles.panel} style={{ marginTop: 16 }}>
-        <h2>Istoric programari</h2>
-        <PatientHistoryTable appointments={patient.appointments} />
+        <h2>Programare</h2>
+        <PatientHistoryTable appointment={appointment} />
       </section>
     </>
   );

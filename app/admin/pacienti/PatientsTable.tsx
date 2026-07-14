@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import type { AdminPatient } from "@/lib/appointments";
-import { DeletePatientButton } from "./DeletePatientButton";
+import { DeletePatientRecordButton } from "./DeletePatientRecordButton";
 import styles from "../admin.module.css";
 
 function matchesSearch(patient: AdminPatient, search: string) {
@@ -17,8 +17,10 @@ function matchesSearch(patient: AdminPatient, search: string) {
   return [
     patient.childName,
     patient.childAge ?? "",
-    ...patient.parentNames,
-    ...patient.phones,
+    patient.parentName,
+    patient.phone,
+    patient.date,
+    patient.time,
   ].some((value) => value.toLocaleLowerCase("ro-RO").includes(query));
 }
 
@@ -35,8 +37,8 @@ export function PatientsTable({
     return patients.filter((patient) => matchesSearch(patient, search));
   }, [patients, search]);
 
-  function openPatient(patientId: string) {
-    router.push(`/admin/pacienti/${patientId}`);
+  function openPatient(appointmentId: string) {
+    router.push(`/admin/pacienti/${appointmentId}`);
   }
 
   return (
@@ -57,8 +59,10 @@ export function PatientsTable({
         <thead>
           <tr>
             <th>Copil</th>
+            <th>Data</th>
+            <th>Ora</th>
             <th>Varsta</th>
-            <th>Parinti / apartinatori</th>
+            <th>Parinte / apartinator</th>
             <th>Telefon</th>
             {canManagePatients ? <th>Actiuni</th> : null}
           </tr>
@@ -67,25 +71,27 @@ export function PatientsTable({
           {filteredPatients.map((patient) => (
             <tr
               className={styles.clickableRow}
-              key={patient.childName.toLocaleLowerCase("ro-RO")}
-              onClick={() => openPatient(patient.patientId)}
+              key={patient.appointmentId}
+              onClick={() => openPatient(patient.appointmentId)}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
                   event.preventDefault();
-                  openPatient(patient.patientId);
+                  openPatient(patient.appointmentId);
                 }
               }}
               role="link"
               tabIndex={0}
             >
               <td><strong>{patient.childName}</strong></td>
+              <td>{patient.day}, {patient.date}</td>
+              <td>{patient.time}</td>
               <td>{patient.childAge || "-"}</td>
-              <td>{patient.parentNames.join(", ") || "-"}</td>
-              <td>{patient.phones.join(", ") || "-"}</td>
+              <td>{patient.parentName || "-"}</td>
+              <td>{patient.phone || "-"}</td>
               {canManagePatients ? (
                 <td>
                   <div className={styles.tableActions}>
-                    <DeletePatientButton compact patientId={patient.patientId} patientName={patient.childName} />
+                    <DeletePatientRecordButton compact appointmentId={patient.appointmentId} patientName={patient.childName} />
                   </div>
                 </td>
               ) : null}
@@ -93,7 +99,7 @@ export function PatientsTable({
           ))}
           {filteredPatients.length === 0 ? (
             <tr>
-              <td colSpan={canManagePatients ? 5 : 4}>Nu exista pacienti pentru cautarea curenta.</td>
+              <td colSpan={canManagePatients ? 7 : 6}>Nu exista fise pentru cautarea curenta.</td>
             </tr>
           ) : null}
         </tbody>

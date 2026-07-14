@@ -68,16 +68,6 @@ model Appointment {
   @@index([status])
 }
 
-model DeletedPatient {
-  id             String   @id @default(cuid())
-  normalizedName String   @unique
-  displayName    String
-  deletedAt      DateTime @default(now())
-  deletedBy      String?
-
-  @@index([deletedAt])
-}
-
 model MedicalService {
   id               String    @id @default(cuid())
   name             String

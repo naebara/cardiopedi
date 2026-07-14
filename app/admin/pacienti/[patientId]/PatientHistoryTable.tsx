@@ -22,7 +22,7 @@ function statusClassName(status: string) {
   return styles.appointmentStatusBadge;
 }
 
-export function PatientHistoryTable({ appointments }: { appointments: AdminPatientAppointment[] }) {
+export function PatientHistoryTable({ appointment }: { appointment: AdminPatientAppointment }) {
   const [selected, setSelected] = useState<AdminPatientAppointment | null>(null);
 
   return (
@@ -39,38 +39,35 @@ export function PatientHistoryTable({ appointments }: { appointments: AdminPatie
           </tr>
         </thead>
         <tbody>
-          {appointments.map((appointment) => (
-            <tr
-              className={styles.clickableRow}
-              key={appointment.id}
-              onClick={() => setSelected(appointment)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  setSelected(appointment);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <td>
-                <span className={styles.historyCellIcon}><CalendarDays size={14} /> {appointment.day}, {appointment.date}</span>
-              </td>
-              <td>
-                <span className={styles.historyCellIcon}><Clock size={14} /> {appointment.time}</span>
-              </td>
-              <td>
-                <span className={styles.historyCellIcon}><Baby size={14} /> {appointment.childAge || "-"}</span>
-              </td>
-              <td>
-                <span className={styles.historyCellIcon}><UserRound size={14} /> {appointment.parentName}</span>
-              </td>
-              <td>
-                <span className={styles.historyCellIcon}><Phone size={14} /> {appointment.phone}</span>
-              </td>
-              <td><span className={statusClassName(appointment.status)}>{appointment.status}</span></td>
-            </tr>
-          ))}
+          <tr
+            className={styles.clickableRow}
+            onClick={() => setSelected(appointment)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setSelected(appointment);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <td>
+              <span className={styles.historyCellIcon}><CalendarDays size={14} /> {appointment.day}, {appointment.date}</span>
+            </td>
+            <td>
+              <span className={styles.historyCellIcon}><Clock size={14} /> {appointment.time}</span>
+            </td>
+            <td>
+              <span className={styles.historyCellIcon}><Baby size={14} /> {appointment.childAge || "-"}</span>
+            </td>
+            <td>
+              <span className={styles.historyCellIcon}><UserRound size={14} /> {appointment.parentName}</span>
+            </td>
+            <td>
+              <span className={styles.historyCellIcon}><Phone size={14} /> {appointment.phone}</span>
+            </td>
+            <td><span className={statusClassName(appointment.status)}>{appointment.status}</span></td>
+          </tr>
         </tbody>
       </table>
 

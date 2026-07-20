@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { requireFeature } from "@/lib/admin-features";
 import { enqueueAuditEvent, type AuditActor } from "@/lib/audit";
+import { canEmailDomainReceiveMail } from "@/lib/email-domain-validation";
+import { validateOptionalEmail } from "@/lib/email-validation";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { formatScheduleDate } from "@/lib/schedule";
@@ -42,10 +44,6 @@ function isDateValue(value: string) {
 
 function isTimeValue(value: string) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
-function isEmailValue(value: string) {
-  return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function dateFromValue(value: string) {
@@ -293,12 +291,24 @@ async function createAppointmentFromForm(formData: FormData, options: CreateAppo
   const childName = textValue(formData, "childName");
   const childAge = textValue(formData, "childAge");
   const phone = textValue(formData, "phone");
-  const email = textValue(formData, "email");
+  const emailValidation = validateOptionalEmail(textValue(formData, "email"));
   const notes = textValue(formData, "notes");
 
-  if (!isDateValue(date) || !isTimeValue(time) || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone) || !isEmailValue(email)) {
+  if (!isDateValue(date) || !isTimeValue(time) || !parentName || !childName || !childAge || !/^\d{10}$/.test(phone)) {
     return {
-      message: "Completeaza corect data, ora, telefonul si emailul daca il adaugi.",
+      message: "Completeaza corect data, ora si numarul de telefon.",
+      status: "error",
+    };
+  }
+
+  if (!emailValidation.isValid) {
+    return { message: emailValidation.message, status: "error" };
+  }
+
+  const email = emailValidation.normalizedEmail;
+  if (email && !await canEmailDomainReceiveMail(email)) {
+    return {
+      message: "Domeniul adresei de email nu exista sau nu poate primi emailuri. Verifica adresa introdusa.",
       status: "error",
     };
   }

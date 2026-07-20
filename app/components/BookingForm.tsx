@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Info, Mail, Phone, Send, UserRound, X } from "lucide-react";
 import { createAppointment, type AppointmentFormState } from "@/app/actions/appointments";
+import { validateOptionalEmail } from "@/lib/email-validation";
 import { appointmentDocumentsNotice, appointmentNotice } from "../site-data";
 import styles from "../public-site.module.css";
 
@@ -154,6 +155,14 @@ function SubmitButton({
       )}
     </button>
   );
+}
+
+function updateEmailValidity(input: HTMLInputElement, showError = false) {
+  const validation = validateOptionalEmail(input.value);
+  input.setCustomValidity(validation.isValid ? "" : validation.message);
+  if (!validation.isValid && showError) {
+    input.reportValidity();
+  }
 }
 
 export function BookingForm({
@@ -428,7 +437,18 @@ export function BookingForm({
 
         <label>
           <span><Mail size={18} /> Email optional</span>
-          <input name="email" type="email" placeholder="email@exemplu.ro" autoComplete="off" />
+          <input
+            autoComplete="email"
+            name="email"
+            onBlur={(event) => updateEmailValidity(event.currentTarget, true)}
+            onChange={(event) => updateEmailValidity(event.currentTarget)}
+            placeholder="email@exemplu.ro"
+            spellCheck={false}
+            type="email"
+          />
+          <small className={styles.emailHint}>
+            Vă rugăm să introduceți o adresă de e-mail validă. Confirmarea programării și toate informațiile importante referitoare la aceasta vor fi transmise pe e-mail.
+          </small>
         </label>
       </div>
 

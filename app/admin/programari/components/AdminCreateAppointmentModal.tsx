@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Alert, Button, Group, Modal, SimpleGrid, Stack, Text, TextInput, Textarea, ThemeIcon } from "@mantine/core";
 import { Baby, CalendarDays, CheckCircle2, Clock, Mail, Phone, Send, UserRound } from "lucide-react";
 import { createAdminAppointment, type AppointmentFormState } from "@/app/actions/appointments";
+import { validateOptionalEmail } from "@/lib/email-validation";
 
 export type AdminAppointmentDraftSlot = {
   date: string;
@@ -54,6 +55,14 @@ function SubmitButton({ disabled }: { disabled: boolean }) {
       Salveaza programarea
     </Button>
   );
+}
+
+function updateEmailValidity(input: HTMLInputElement, showError = false) {
+  const validation = validateOptionalEmail(input.value);
+  input.setCustomValidity(validation.isValid ? "" : validation.message);
+  if (!validation.isValid && showError) {
+    input.reportValidity();
+  }
 }
 
 export function AdminCreateAppointmentModal({
@@ -167,11 +176,14 @@ export function AdminCreateAppointmentModal({
                   value={phone}
                 />
                 <TextInput
-                  autoComplete="off"
+                  autoComplete="email"
                   label="Email optional"
                   leftSection={<Mail size={16} />}
                   name="email"
+                  onBlur={(event) => updateEmailValidity(event.currentTarget, true)}
+                  onChange={(event) => updateEmailValidity(event.currentTarget)}
                   placeholder="email@exemplu.ro"
+                  spellCheck={false}
                   type="email"
                 />
                 <TextInput

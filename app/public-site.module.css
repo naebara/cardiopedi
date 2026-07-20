@@ -856,6 +856,13 @@
   font-weight: 800;
 }
 
+.emailHint {
+  color: #5e7784;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .bookingForm textarea {
   line-height: 1.5;
   min-height: 110px;

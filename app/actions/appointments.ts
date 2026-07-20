@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireFeature } from "@/lib/admin-features";
+import { enqueueAuditEvent, type AuditActor } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { formatScheduleDate } from "@/lib/schedule";
@@ -108,6 +109,7 @@ function formatAppointmentDate(value: string) {
 const DEFAULT_APPOINTMENT_SERVICE = "Programare";
 
 type CreateAppointmentOptions = {
+  actor?: AuditActor;
   ownerId?: string | null;
   source?: "admin" | "public";
 };
@@ -404,6 +406,24 @@ async function createAppointmentFromForm(formData: FormData, options: CreateAppo
     };
   }
 
+  if (options.source === "admin" && options.actor) {
+    enqueueAuditEvent({
+      action: "APPOINTMENT_CREATED",
+      actor: options.actor,
+      category: "APPOINTMENTS",
+      changes: {
+        date: { after: date, before: null },
+        durationMin: { after: matchingScheduleSlot.durationMin, before: null },
+        service: { after: DEFAULT_APPOINTMENT_SERVICE, before: null },
+        status: { after: "NEW", before: null },
+        time: { after: time, before: null },
+      },
+      entityId: appointmentId,
+      entityType: "Appointment",
+      summary: `Programare creata din admin (${appointmentId})`,
+    });
+  }
+
   revalidatePath("/programari");
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
@@ -456,5 +476,5 @@ export async function createAdminAppointment(
   formData: FormData,
 ): Promise<AppointmentFormState> {
   const currentUser = await requireFeature("appointments.manage");
-  return createAppointmentFromForm(formData, { ownerId: currentUser.id, source: "admin" });
+  return createAppointmentFromForm(formData, { actor: currentUser, ownerId: currentUser.id, source: "admin" });
 }

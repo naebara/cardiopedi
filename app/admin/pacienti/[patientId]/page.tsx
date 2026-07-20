@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Baby, CalendarDays, Mail, Phone, UserRound } from "lucide-react";
 import { canAccess, requireFeature } from "@/lib/admin-features";
+import { enqueueAuditEvent } from "@/lib/audit";
 import { getAdminPatientDetails } from "@/lib/appointments";
 import { DeletePatientRecordButton } from "../DeletePatientRecordButton";
 import { PatientHistoryTable } from "./PatientHistoryTable";
@@ -19,6 +20,15 @@ export default async function AdminPatientDetailsPage({
   if (!appointment) {
     notFound();
   }
+
+  enqueueAuditEvent({
+    action: "PATIENT_RECORD_VIEWED",
+    actor: currentUser,
+    category: "PATIENTS",
+    entityId: appointment.id,
+    entityType: "Appointment",
+    summary: `Fisa individuala a fost accesata (${appointment.id})`,
+  });
 
   return (
     <>

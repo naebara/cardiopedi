@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { AUDIT_VIEWER_EMAIL, enqueueAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 
 export const ADMIN_FEATURES = [
@@ -121,6 +122,15 @@ export async function requireFeature(feature: AdminFeatureKey) {
   const user = await getCurrentAdminUser();
 
   if (!canAccess(user, feature)) {
+    enqueueAuditEvent({
+      action: "ACCESS_DENIED",
+      actor: user,
+      category: "SECURITY",
+      entityId: feature,
+      entityType: "AdminFeature",
+      status: "DENIED",
+      summary: `Acces refuzat la permisiunea ${feature}`,
+    });
     redirect("/admin/no-access");
   }
 
@@ -131,6 +141,33 @@ export async function requireMasterUser() {
   const user = await getCurrentAdminUser();
 
   if (!user.isMasterUser) {
+    enqueueAuditEvent({
+      action: "ACCESS_DENIED",
+      actor: user,
+      category: "SECURITY",
+      entityId: "master-user",
+      entityType: "AdminRole",
+      status: "DENIED",
+      summary: "Acces refuzat la o sectiune rezervata utilizatorilor master",
+    });
+    redirect("/admin/no-access");
+  }
+
+  return user;
+}
+
+export async function requireAuditViewer() {
+  const user = await getCurrentAdminUser();
+
+  if (user.email.toLowerCase() !== AUDIT_VIEWER_EMAIL) {
+    enqueueAuditEvent({
+      action: "AUDIT_ACCESS_DENIED",
+      actor: user,
+      category: "SECURITY",
+      entityType: "AuditLog",
+      status: "DENIED",
+      summary: "Acces refuzat la pagina Audit",
+    });
     redirect("/admin/no-access");
   }
 

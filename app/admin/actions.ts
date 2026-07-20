@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { ADMIN_FEATURES, getCurrentAdminUser, isKnownFeature, requireFeature, requireMasterUser } from "@/lib/admin-features";
+import { changedFields, enqueueAuditEvent } from "@/lib/audit";
 import { sendMail } from "@/lib/mail";
 import { prisma } from "@/lib/prisma";
 import { formatScheduleDate } from "@/lib/schedule";
@@ -100,6 +101,15 @@ export async function updateOwnPassword(_prevState: AccountPasswordState, formDa
 
   const passwordMatches = await bcrypt.compare(result.data.currentPassword, user.password);
   if (!passwordMatches) {
+    enqueueAuditEvent({
+      action: "PASSWORD_CHANGE_FAILED",
+      actor: currentUser,
+      category: "AUTH",
+      entityId: currentUser.id,
+      entityType: "User",
+      status: "FAILURE",
+      summary: "Schimbarea parolei a esuat: parola curenta incorecta",
+    });
     return {
       message: "Parola curenta este incorecta.",
       status: "error",
@@ -112,6 +122,15 @@ export async function updateOwnPassword(_prevState: AccountPasswordState, formDa
     SET "password" = ${hashedPassword}, "updatedAt" = NOW()
     WHERE "id" = ${currentUser.id}
   `;
+
+  enqueueAuditEvent({
+    action: "PASSWORD_CHANGED",
+    actor: currentUser,
+    category: "AUTH",
+    entityId: currentUser.id,
+    entityType: "User",
+    summary: "Parola contului a fost schimbata",
+  });
 
   return {
     message: "Parola a fost actualizata.",
@@ -182,6 +201,23 @@ export async function createAdminUser(_prevState: CreateAdminUserState, formData
     }
   });
 
+  enqueueAuditEvent({
+    action: "ADMIN_USER_CREATED",
+    actor: currentUser,
+    category: "USERS",
+    changes: {
+      email: { after: email, before: null },
+      features: { after: isMasterUser ? "ALL" : grantedFeatures, before: [] },
+      isMasterUser: { after: isMasterUser, before: null },
+      name: { after: name || null, before: null },
+      receivesAppointmentEmails: { after: receivesAppointmentEmails, before: null },
+      receivesBlockedDateEmails: { after: receivesBlockedDateEmails, before: null },
+    },
+    entityId: userId,
+    entityType: "User",
+    summary: `Utilizator admin creat: ${email}`,
+  });
+
   revalidatePath("/admin/users");
   revalidatePath("/admin");
 
@@ -245,13 +281,33 @@ export async function updateUserAccess(formData: FormData): Promise<UpdateUserAc
   }
 
   const hashedTemporaryPassword = temporaryPassword ? await bcrypt.hash(temporaryPassword, 10) : null;
+  const [previousUser, previousGrants] = await Promise.all([
+    prisma.user.findUnique({
+      select: {
+        email: true,
+        isMasterUser: true,
+        name: true,
+        receivesAppointmentEmails: true,
+        receivesBlockedDateEmails: true,
+      },
+      where: { id: userId },
+    }),
+    prisma.userFeatureGrant.findMany({ select: { featureKey: true }, where: { userId } }),
+  ]);
+
+  if (!previousUser) {
+    return { message: "Utilizatorul nu a fost gasit.", status: "error" };
+  }
+
+  const effectiveMaster = userId === currentUser.id ? true : isMasterUser;
+  const effectiveFeatures = effectiveMaster ? "ALL" : [...grantedFeatures].sort();
 
   await prisma.$executeRaw`
     UPDATE "User"
     SET
       "name" = ${name || null},
       "email" = ${email},
-      "isMasterUser" = ${userId === currentUser.id ? true : isMasterUser},
+      "isMasterUser" = ${effectiveMaster},
       "receivesAppointmentEmails" = ${receivesAppointmentEmails},
       "receivesBlockedDateEmails" = ${receivesBlockedDateEmails},
       "password" = COALESCE(${hashedTemporaryPassword}, "password"),
@@ -277,6 +333,35 @@ export async function updateUserAccess(formData: FormData): Promise<UpdateUserAc
       `;
     }
   }
+
+  const before = {
+    email: previousUser.email,
+    features: previousUser.isMasterUser ? "ALL" : previousGrants.map((grant) => grant.featureKey).sort(),
+    isMasterUser: previousUser.isMasterUser,
+    name: previousUser.name,
+    receivesAppointmentEmails: previousUser.receivesAppointmentEmails,
+    receivesBlockedDateEmails: previousUser.receivesBlockedDateEmails,
+    temporaryPasswordSet: false,
+  };
+  const afterValue = {
+    email,
+    features: effectiveFeatures,
+    isMasterUser: effectiveMaster,
+    name: name || null,
+    receivesAppointmentEmails,
+    receivesBlockedDateEmails,
+    temporaryPasswordSet: Boolean(hashedTemporaryPassword),
+  };
+
+  enqueueAuditEvent({
+    action: "ADMIN_USER_UPDATED",
+    actor: currentUser,
+    category: "USERS",
+    changes: changedFields(before, afterValue),
+    entityId: userId,
+    entityType: "User",
+    summary: `Utilizator admin actualizat: ${email}`,
+  });
 
   revalidatePath("/admin/users");
   revalidatePath("/admin");
@@ -315,6 +400,16 @@ export async function deletePatientRecord(appointmentIdValue: string): Promise<D
       status: "error",
     };
   }
+
+  enqueueAuditEvent({
+    action: "PATIENT_RECORD_DELETED",
+    actor: currentUser,
+    category: "PATIENTS",
+    changes: { deleted: { after: true, before: false } },
+    entityId: appointmentId,
+    entityType: "Appointment",
+    summary: `Fisa pacient si programarea asociata au fost sterse (${appointmentId})`,
+  });
 
   revalidatePath("/programari");
   revalidatePath("/admin");
@@ -395,13 +490,14 @@ function readServiceForm(formData: FormData) {
 }
 
 export async function createMedicalService(formData: FormData) {
-  await requireFeature("services.manage");
+  const currentUser = await requireFeature("services.manage");
   const service = readServiceForm(formData);
 
   if (!service) {
     return;
   }
 
+  const serviceId = crypto.randomUUID();
   await prisma.$executeRaw`
     INSERT INTO "MedicalService" (
       "id",
@@ -418,7 +514,7 @@ export async function createMedicalService(formData: FormData) {
       "updatedAt"
     )
     VALUES (
-      ${crypto.randomUUID()},
+      ${serviceId},
       ${service.name},
       ${service.description},
       ${service.priceCents},
@@ -433,6 +529,16 @@ export async function createMedicalService(formData: FormData) {
     )
   `;
 
+  enqueueAuditEvent({
+    action: "SERVICE_CREATED",
+    actor: currentUser,
+    category: "SERVICES",
+    changes: Object.fromEntries(Object.entries(service).map(([key, value]) => [key, { after: value, before: null }])),
+    entityId: serviceId,
+    entityType: "MedicalService",
+    summary: `Serviciu creat: ${service.name}`,
+  });
+
   revalidatePath("/");
   revalidatePath("/servicii");
   revalidatePath("/programari");
@@ -440,13 +546,16 @@ export async function createMedicalService(formData: FormData) {
 }
 
 export async function updateMedicalService(formData: FormData) {
-  await requireFeature("services.manage");
+  const currentUser = await requireFeature("services.manage");
   const serviceId = String(formData.get("serviceId") ?? "");
   const service = readServiceForm(formData);
 
   if (!serviceId || !service) {
     return;
   }
+
+  const previousService = await prisma.medicalService.findUnique({ where: { id: serviceId } });
+  if (!previousService) return;
 
   await prisma.$executeRaw`
     UPDATE "MedicalService"
@@ -465,6 +574,27 @@ export async function updateMedicalService(formData: FormData) {
     WHERE "id" = ${serviceId}
   `;
 
+  enqueueAuditEvent({
+    action: "SERVICE_UPDATED",
+    actor: currentUser,
+    category: "SERVICES",
+    changes: changedFields({
+      currency: previousService.currency,
+      description: previousService.description,
+      discountEnabled: previousService.discountEnabled,
+      discountEndsAt: previousService.discountEndsAt,
+      discountPercent: previousService.discountPercent,
+      discountStartsAt: previousService.discountStartsAt,
+      isPaused: previousService.isPaused,
+      name: previousService.name,
+      priceCents: previousService.priceCents,
+      sortOrder: previousService.sortOrder,
+    }, service),
+    entityId: serviceId,
+    entityType: "MedicalService",
+    summary: `Serviciu actualizat: ${service.name}`,
+  });
+
   revalidatePath("/");
   revalidatePath("/servicii");
   revalidatePath("/programari");
@@ -472,17 +602,30 @@ export async function updateMedicalService(formData: FormData) {
 }
 
 export async function deleteMedicalService(formData: FormData) {
-  await requireFeature("services.manage");
+  const currentUser = await requireFeature("services.manage");
   const serviceId = String(formData.get("serviceId") ?? "");
 
   if (!serviceId) {
     return;
   }
 
+  const previousService = await prisma.medicalService.findUnique({ select: { name: true }, where: { id: serviceId } });
+  if (!previousService) return;
+
   await prisma.$executeRaw`
     DELETE FROM "MedicalService"
     WHERE "id" = ${serviceId}
   `;
+
+  enqueueAuditEvent({
+    action: "SERVICE_DELETED",
+    actor: currentUser,
+    category: "SERVICES",
+    changes: { deleted: { after: true, before: false } },
+    entityId: serviceId,
+    entityType: "MedicalService",
+    summary: `Serviciu sters: ${previousService.name}`,
+  });
 
   revalidatePath("/");
   revalidatePath("/servicii");
@@ -555,13 +698,14 @@ function readScheduleSlotForm(formData: FormData) {
 }
 
 export async function createScheduleSlot(formData: FormData) {
-  await requireFeature("schedule.manage");
+  const currentUser = await requireFeature("schedule.manage");
   const slot = readScheduleSlotForm(formData);
 
   if (!slot) {
     return;
   }
 
+  const slotId = crypto.randomUUID();
   await prisma.$executeRaw`
     INSERT INTO "ClinicScheduleSlot" (
       "id",
@@ -574,7 +718,7 @@ export async function createScheduleSlot(formData: FormData) {
       "updatedAt"
     )
     VALUES (
-      ${crypto.randomUUID()},
+      ${slotId},
       ${slot.dayOfWeek},
       ${slot.startTime},
       ${slot.endTime},
@@ -585,6 +729,16 @@ export async function createScheduleSlot(formData: FormData) {
     )
   `;
 
+  enqueueAuditEvent({
+    action: "SCHEDULE_SLOT_CREATED",
+    actor: currentUser,
+    category: "SCHEDULE",
+    changes: Object.fromEntries(Object.entries(slot).map(([key, value]) => [key, { after: value, before: null }])),
+    entityId: slotId,
+    entityType: "ClinicScheduleSlot",
+    summary: `Interval de lucru creat: ziua ${slot.dayOfWeek}, ${slot.startTime}-${slot.endTime}`,
+  });
+
   revalidatePath("/");
   revalidatePath("/contact");
   revalidatePath("/programari");
@@ -592,13 +746,16 @@ export async function createScheduleSlot(formData: FormData) {
 }
 
 export async function updateScheduleSlot(formData: FormData) {
-  await requireFeature("schedule.manage");
+  const currentUser = await requireFeature("schedule.manage");
   const slotId = String(formData.get("slotId") ?? "");
   const slot = readScheduleSlotForm(formData);
 
   if (!slotId || !slot) {
     return;
   }
+
+  const previousSlot = await prisma.clinicScheduleSlot.findUnique({ where: { id: slotId } });
+  if (!previousSlot) return;
 
   await prisma.$executeRaw`
     UPDATE "ClinicScheduleSlot"
@@ -613,6 +770,23 @@ export async function updateScheduleSlot(formData: FormData) {
     WHERE "id" = ${slotId}
   `;
 
+  enqueueAuditEvent({
+    action: "SCHEDULE_SLOT_UPDATED",
+    actor: currentUser,
+    category: "SCHEDULE",
+    changes: changedFields({
+      dayOfWeek: previousSlot.dayOfWeek,
+      durationMin: previousSlot.durationMin,
+      endTime: previousSlot.endTime,
+      isPaused: previousSlot.isPaused,
+      sortOrder: previousSlot.sortOrder,
+      startTime: previousSlot.startTime,
+    }, slot),
+    entityId: slotId,
+    entityType: "ClinicScheduleSlot",
+    summary: `Interval de lucru actualizat: ziua ${slot.dayOfWeek}, ${slot.startTime}-${slot.endTime}`,
+  });
+
   revalidatePath("/");
   revalidatePath("/contact");
   revalidatePath("/programari");
@@ -620,17 +794,30 @@ export async function updateScheduleSlot(formData: FormData) {
 }
 
 export async function deleteScheduleSlot(formData: FormData) {
-  await requireFeature("schedule.manage");
+  const currentUser = await requireFeature("schedule.manage");
   const slotId = String(formData.get("slotId") ?? "");
 
   if (!slotId) {
     return;
   }
 
+  const previousSlot = await prisma.clinicScheduleSlot.findUnique({ where: { id: slotId } });
+  if (!previousSlot) return;
+
   await prisma.$executeRaw`
     DELETE FROM "ClinicScheduleSlot"
     WHERE "id" = ${slotId}
   `;
+
+  enqueueAuditEvent({
+    action: "SCHEDULE_SLOT_DELETED",
+    actor: currentUser,
+    category: "SCHEDULE",
+    changes: { deleted: { after: true, before: false } },
+    entityId: slotId,
+    entityType: "ClinicScheduleSlot",
+    summary: `Interval de lucru sters: ziua ${previousSlot.dayOfWeek}, ${previousSlot.startTime}-${previousSlot.endTime}`,
+  });
 
   revalidatePath("/");
   revalidatePath("/contact");
@@ -808,6 +995,7 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
 
   const blockedDate = blockedDateFromValue(date);
   const blockedEndDate = blockedDateFromValue(endDate);
+  const previousBlockedDate = await prisma.clinicBlockedDate.findUnique({ where: { date: blockedDate } });
   const activeScheduleSlots = await prisma.$queryRaw<Array<{ id: string }>>`
     SELECT "id"
     FROM "ClinicScheduleSlot"
@@ -828,7 +1016,7 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
     };
   }
 
-  await prisma.$executeRaw`
+  const savedBlockedDates = await prisma.$queryRaw<Array<{ id: string }>>`
     INSERT INTO "ClinicBlockedDate" ("id", "date", "endDate", "startTime", "endTime", "reason", "createdBy")
     VALUES (
       ${crypto.randomUUID()},
@@ -845,7 +1033,9 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
       "endTime" = EXCLUDED."endTime",
       "reason" = EXCLUDED."reason",
       "createdBy" = EXCLUDED."createdBy"
+    RETURNING "id"
   `;
+  const blockedDateId = savedBlockedDates[0]?.id;
 
   const existingAppointments = await prisma.$queryRaw<Array<{
     childAge: string | null;
@@ -869,6 +1059,36 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
       )
     ORDER BY "date" ASC, "time" ASC
   `;
+
+  if (blockedDateId) {
+    const nextBlockedDate = {
+      date,
+      endDate,
+      endTime: hasPartialTime ? endTime : null,
+      reason: reason || null,
+      startTime: hasPartialTime ? startTime : null,
+    };
+    const changes = previousBlockedDate
+      ? changedFields({
+          date: previousBlockedDate.date.toISOString().slice(0, 10),
+          endDate: (previousBlockedDate.endDate ?? previousBlockedDate.date).toISOString().slice(0, 10),
+          endTime: previousBlockedDate.endTime,
+          reason: previousBlockedDate.reason,
+          startTime: previousBlockedDate.startTime,
+        }, nextBlockedDate)
+      : Object.fromEntries(Object.entries(nextBlockedDate).map(([key, value]) => [key, { after: value, before: null }]));
+
+    enqueueAuditEvent({
+      action: previousBlockedDate ? "BLOCKED_PERIOD_UPDATED" : "BLOCKED_PERIOD_CREATED",
+      actor: currentUser,
+      category: "SCHEDULE",
+      changes,
+      entityId: blockedDateId,
+      entityType: "ClinicBlockedDate",
+      metadata: { affectedAppointments: existingAppointments.length },
+      summary: `${previousBlockedDate ? "Perioada blocata actualizata" : "Timp liber planificat"}: ${blockedPeriodLabel(date, endDate, startTime, endTime)}`,
+    });
+  }
 
   if (existingAppointments.length > 0) {
     try {
@@ -899,17 +1119,30 @@ export async function blockScheduleDate(_prevState: BlockScheduleDateState, form
 }
 
 export async function deleteBlockedScheduleDate(formData: FormData) {
-  await requireFeature("schedule.manage");
+  const currentUser = await requireFeature("schedule.manage");
   const blockedDateId = String(formData.get("blockedDateId") ?? "").trim();
 
   if (!blockedDateId) {
     return;
   }
 
+  const previousBlockedDate = await prisma.clinicBlockedDate.findUnique({ where: { id: blockedDateId } });
+  if (!previousBlockedDate) return;
+
   await prisma.$executeRaw`
     DELETE FROM "ClinicBlockedDate"
     WHERE "id" = ${blockedDateId}
   `;
+
+  enqueueAuditEvent({
+    action: "BLOCKED_PERIOD_DELETED",
+    actor: currentUser,
+    category: "SCHEDULE",
+    changes: { deleted: { after: true, before: false } },
+    entityId: blockedDateId,
+    entityType: "ClinicBlockedDate",
+    summary: `Perioada blocata a fost stearsa (${previousBlockedDate.date.toISOString().slice(0, 10)})`,
+  });
 
   revalidatePath("/");
   revalidatePath("/programari");
@@ -917,13 +1150,19 @@ export async function deleteBlockedScheduleDate(formData: FormData) {
 }
 
 export async function confirmAppointment(appointmentId: string) {
-  await requireFeature("appointments.manage");
+  const currentUser = await requireFeature("appointments.manage");
 
   const id = String(appointmentId ?? "").trim();
 
   if (!id) {
     return;
   }
+
+  const previousAppointment = await prisma.appointment.findFirst({
+    select: { status: true },
+    where: { deletedAt: null, id },
+  });
+  if (!previousAppointment) return;
 
   await prisma.$executeRaw`
     UPDATE "Appointment"
@@ -932,18 +1171,34 @@ export async function confirmAppointment(appointmentId: string) {
       AND "deletedAt" IS NULL
   `;
 
+  enqueueAuditEvent({
+    action: "APPOINTMENT_CONFIRMED",
+    actor: currentUser,
+    category: "APPOINTMENTS",
+    changes: { status: { after: "CONFIRMED", before: previousAppointment.status } },
+    entityId: id,
+    entityType: "Appointment",
+    summary: `Programare confirmata (${id})`,
+  });
+
   revalidatePath("/admin");
   revalidatePath("/admin/programari");
 }
 
 export async function deleteAppointment(appointmentId: string) {
-  await requireFeature("appointments.manage");
+  const currentUser = await requireFeature("appointments.manage");
 
   const id = String(appointmentId ?? "").trim();
 
   if (!id) {
     return;
   }
+
+  const previousAppointment = await prisma.appointment.findFirst({
+    select: { status: true },
+    where: { deletedAt: null, id },
+  });
+  if (!previousAppointment) return;
 
   await prisma.$executeRaw`
     UPDATE "Appointment"
@@ -952,6 +1207,16 @@ export async function deleteAppointment(appointmentId: string) {
       AND "deletedAt" IS NULL
   `;
 
+  enqueueAuditEvent({
+    action: "APPOINTMENT_CANCELLED",
+    actor: currentUser,
+    category: "APPOINTMENTS",
+    changes: { status: { after: "CANCELLED", before: previousAppointment.status } },
+    entityId: id,
+    entityType: "Appointment",
+    summary: `Programare anulata (${id})`,
+  });
+
   revalidatePath("/");
   revalidatePath("/programari");
   revalidatePath("/admin");
@@ -959,7 +1224,7 @@ export async function deleteAppointment(appointmentId: string) {
 }
 
 export async function rescheduleAppointment(appointmentId: string, date: string, time: string, allowOutsideSchedule = false) {
-  await requireFeature("appointments.manage");
+  const currentUser = await requireFeature("appointments.manage");
 
   const id = String(appointmentId ?? "").trim();
   const nextDate = String(date ?? "").trim();
@@ -969,8 +1234,8 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
     return { message: "Data sau ora nu este valida.", status: "error" as const };
   }
 
-  const appointment = await prisma.$queryRaw<Array<{ durationMin: number; id: string; status: string }>>`
-    SELECT "durationMin", "id", "status"
+  const appointment = await prisma.$queryRaw<Array<{ date: Date; durationMin: number; id: string; status: string; time: string }>>`
+    SELECT "date", "durationMin", "id", "status", "time"
     FROM "Appointment"
     WHERE "id" = ${id}
       AND "deletedAt" IS NULL
@@ -1037,6 +1302,25 @@ export async function rescheduleAppointment(appointmentId: string, date: string,
     WHERE "id" = ${id}
       AND "deletedAt" IS NULL
   `;
+
+  enqueueAuditEvent({
+    action: "APPOINTMENT_RESCHEDULED",
+    actor: currentUser,
+    category: "APPOINTMENTS",
+    changes: changedFields({
+      date: appointment[0].date.toISOString().slice(0, 10),
+      durationMin: appointment[0].durationMin,
+      time: appointment[0].time,
+    }, {
+      date: nextDate,
+      durationMin: matchingScheduleSlot?.durationMin ?? appointment[0].durationMin,
+      time: nextTime,
+    }),
+    entityId: id,
+    entityType: "Appointment",
+    metadata: { allowOutsideSchedule },
+    summary: `Programare reprogramata (${id})`,
+  });
 
   revalidatePath("/");
   revalidatePath("/programari");

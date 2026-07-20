@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const { execSync } = require('child_process');
 const readline = require('readline');
@@ -65,9 +65,14 @@ async function main() {
         // We need to load env to get DATABASE_URL for the "from" state
         require('dotenv').config();
 
-        // Prisma 7 requires using --from-config-datasource instead of --from-url
-        // We already loaded dotenv, so DATABASE_URL is in process.env, which prisma.config.ts reads.
-        const command = `npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`;
+        // Prisma 6 reads the current database URL from the schema datasource and
+        // compares it with the target datamodel without applying any changes.
+        const command = [
+            'npx prisma migrate diff',
+            '--from-schema-datasource prisma/schema.prisma',
+            '--to-schema-datamodel prisma/schema.prisma',
+            '--script',
+        ].join(' ');
 
         const sql = execSync(command).toString();
 
@@ -103,6 +108,7 @@ ${sql}
 
     } catch (error) {
         console.error('\n❌ Error:', error.message);
+        process.exitCode = 1;
     } finally {
         rl.close();
     }

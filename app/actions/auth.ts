@@ -2,6 +2,7 @@
 
 import { signIn } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { enqueueAuditEvent } from '@/lib/audit';
 import { isMailConfigured, sendMail } from '@/lib/mail';
 import bcrypt from 'bcryptjs';
 import { AuthError } from 'next-auth';
@@ -100,11 +101,29 @@ export async function requestPasswordReset(_prevState: ForgotPasswordState, form
             where: { id: user.id },
         });
         console.error('Password reset email error:', error);
+        enqueueAuditEvent({
+            action: 'PASSWORD_RESET_FAILED',
+            actor: { email: user.email, id: user.id },
+            category: 'AUTH',
+            entityId: user.id,
+            entityType: 'User',
+            status: 'FAILURE',
+            summary: 'Resetarea parolei nu a putut fi finalizata',
+        });
         return {
             message: 'Emailul de resetare nu a putut fi trimis. Parola a ramas neschimbata.',
             status: 'error',
         };
     }
+
+    enqueueAuditEvent({
+        action: 'PASSWORD_RESET_REQUESTED',
+        actor: { email: user.email, id: user.id },
+        category: 'AUTH',
+        entityId: user.id,
+        entityType: 'User',
+        summary: 'Resetare de parola finalizata prin email',
+    });
 
     return {
         message: successMessage,

@@ -1,9 +1,10 @@
-import { CalendarDays, HeartPulse, KeyRound, LockKeyhole, Settings, Stethoscope, UsersRound } from "lucide-react";
+import { CalendarDays, HeartPulse, KeyRound, LockKeyhole, ScrollText, Settings, Stethoscope, UsersRound } from "lucide-react";
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { AdminNavItem } from "./components/AdminNavItem";
 import { AdminContentWrapper } from "./components/AdminContentWrapper";
 import { AdminSidebar } from "./components/AdminSidebar";
 import { canAccess, getCurrentAdminUser } from "@/lib/admin-features";
+import { AUDIT_VIEWER_EMAIL } from "@/lib/audit";
 import styles from "./admin.module.css";
 
 const navItems = [
@@ -40,6 +41,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </AdminNavItem>
             );
           })}
+          {user.email.toLowerCase() === AUDIT_VIEWER_EMAIL ? (
+            <AdminNavItem href="/admin/audit">
+              <ScrollText size={18} />
+              Audit
+            </AdminNavItem>
+          ) : null}
         </nav>
 
         <div className={styles.sidebarFooter}>

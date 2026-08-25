@@ -105,7 +105,7 @@ function formatAppointmentDate(value: string) {
 }
 
 const DEFAULT_APPOINTMENT_SERVICE = "Programare";
-const PATIENT_CONFIRMATION_ADDRESS = "Str. Tudor Vladimirescu nr. 8, etaj 3, cabinet nr. 31, Oradea.";
+const APPOINTMENT_EMAIL_ADDRESS = "Str. Tudor Vladimirescu nr. 8, etaj 3, cabinet nr. 31, Oradea.";
 const CLINIC_WEBSITE_URL = "https://cardiopedi.ro/";
 
 type CreateAppointmentOptions = {
@@ -113,6 +113,50 @@ type CreateAppointmentOptions = {
   ownerId?: string | null;
   source?: "admin" | "public";
 };
+
+function appointmentEmailInformationText() {
+  return [
+    "Adresa:",
+    `📍 ${APPOINTMENT_EMAIL_ADDRESS}`,
+    "",
+    "Important: Cabinetul nu are în prezent contract cu Casa de Asigurări de Sănătate (CAS), consultațiile și investigațiile fiind efectuate în regim privat.",
+    "",
+    "Lista actualizată a serviciilor și tarifelor poate fi consultată pe site-ul cabinetului:",
+    CLINIC_WEBSITE_URL,
+    "",
+    "Vă rugăm să aveți la dumneavoastră documentele medicale și investigațiile anterioare ale copilului, dacă acestea sunt disponibile.",
+    "",
+    "Vă mulțumim și vă așteptăm cu drag!",
+    "Cardio Pedi – Dr. Bădulescu Mihaela",
+    "Medic specialist cardiologie pediatrică și pediatrie",
+  ].join("\n");
+}
+
+function appointmentEmailInformationHtml() {
+  return `
+    <div style="margin-top:24px;padding-top:22px;border-top:1px solid #d7e8ea;color:#4e6a78;font-size:15px;line-height:1.65;">
+      <p style="margin:0 0 14px;color:#143047;">
+        <strong>Adresa:</strong><br>
+        📍 ${escapeHtml(APPOINTMENT_EMAIL_ADDRESS)}
+      </p>
+      <p style="margin:0 0 14px;">
+        <strong style="color:#143047;">Important:</strong> Cabinetul nu are în prezent contract cu Casa de Asigurări de Sănătate (CAS), consultațiile și investigațiile fiind efectuate în regim privat.
+      </p>
+      <p style="margin:0 0 14px;">
+        Lista actualizată a serviciilor și tarifelor poate fi consultată pe site-ul cabinetului:<br>
+        <a href="${CLINIC_WEBSITE_URL}" style="color:#1f84ba;font-weight:700;">www.cardiopedi.ro</a>
+      </p>
+      <p style="margin:0 0 14px;">
+        Vă rugăm să aveți la dumneavoastră documentele medicale și investigațiile anterioare ale copilului, dacă acestea sunt disponibile.
+      </p>
+      <p style="margin:0;color:#143047;">
+        Vă mulțumim și vă așteptăm cu drag!<br>
+        <strong>Cardio Pedi – Dr. Bădulescu Mihaela</strong><br>
+        Medic specialist cardiologie pediatrică și pediatrie
+      </p>
+    </div>
+  `;
+}
 
 function appointmentNotificationText(appointment: AppointmentEmailData) {
   return [
@@ -127,6 +171,8 @@ function appointmentNotificationText(appointment: AppointmentEmailData) {
     `Telefon: ${appointment.phone}`,
     `Email: ${appointment.email || "-"}`,
     `Motivul prezentarii: ${appointment.notes || "-"}`,
+    "",
+    appointmentEmailInformationText(),
   ].join("\n");
 }
 
@@ -164,6 +210,7 @@ function appointmentNotificationHtml(appointment: AppointmentEmailData) {
                 </tr>
               `).join("")}
             </table>
+            ${appointmentEmailInformationHtml()}
           </td>
         </tr>
       </table>
@@ -189,19 +236,7 @@ function patientConfirmationText(appointment: AppointmentEmailData) {
     "",
     "Va rugam sa ajungeti cu cateva minute mai devreme. Daca apare o intarziere sau doriti modificarea programarii, ne puteti contacta telefonic.",
     "",
-    "Adresa:",
-    `📍 ${PATIENT_CONFIRMATION_ADDRESS}`,
-    "",
-    "Important: Cabinetul nu are în prezent contract cu Casa de Asigurări de Sănătate (CAS), consultațiile și investigațiile fiind efectuate în regim privat.",
-    "",
-    "Lista actualizată a serviciilor și tarifelor poate fi consultată pe site-ul cabinetului:",
-    CLINIC_WEBSITE_URL,
-    "",
-    "Vă rugăm să aveți la dumneavoastră documentele medicale și investigațiile anterioare ale copilului, dacă acestea sunt disponibile.",
-    "",
-    "Vă mulțumim și vă așteptăm cu drag!",
-    "Cardio Pedi – Dr. Bădulescu Mihaela",
-    "Medic specialist cardiologie pediatrică și pediatrie",
+    appointmentEmailInformationText(),
   ].join("\n");
 }
 
@@ -251,27 +286,7 @@ function patientConfirmationHtml(appointment: AppointmentEmailData) {
                 Deschide locatia in Google Maps
               </a>
             </div>
-            <div style="margin-top:24px;padding-top:22px;border-top:1px solid #d7e8ea;color:#4e6a78;font-size:15px;line-height:1.65;">
-              <p style="margin:0 0 14px;color:#143047;">
-                <strong>Adresa:</strong><br>
-                📍 ${escapeHtml(PATIENT_CONFIRMATION_ADDRESS)}
-              </p>
-              <p style="margin:0 0 14px;">
-                <strong style="color:#143047;">Important:</strong> Cabinetul nu are în prezent contract cu Casa de Asigurări de Sănătate (CAS), consultațiile și investigațiile fiind efectuate în regim privat.
-              </p>
-              <p style="margin:0 0 14px;">
-                Lista actualizată a serviciilor și tarifelor poate fi consultată pe site-ul cabinetului:<br>
-                <a href="${CLINIC_WEBSITE_URL}" style="color:#1f84ba;font-weight:700;">cardiopedi.ro</a>
-              </p>
-              <p style="margin:0 0 14px;">
-                Vă rugăm să aveți la dumneavoastră documentele medicale și investigațiile anterioare ale copilului, dacă acestea sunt disponibile.
-              </p>
-              <p style="margin:0;color:#143047;">
-                Vă mulțumim și vă așteptăm cu drag!<br>
-                <strong>Cardio Pedi – Dr. Bădulescu Mihaela</strong><br>
-                Medic specialist cardiologie pediatrică și pediatrie
-              </p>
-            </div>
+            ${appointmentEmailInformationHtml()}
           </td>
         </tr>
       </table>

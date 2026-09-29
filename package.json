@@ -57,6 +57,12 @@
     "typescript": "^5"
   },
   "overrides": {
+    "@auth/core": {
+      "nodemailer": "$nodemailer"
+    },
+    "next-auth": {
+      "nodemailer": "$nodemailer"
+    },
     "next": {
       "postcss": "8.5.14"
     }

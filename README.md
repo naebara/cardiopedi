@@ -74,6 +74,13 @@ npm run dev
 
 App: [http://localhost:3000](http://localhost:3000)
 
+### Nodemailer and NextAuth dependencies
+
+Cardiopedi uses NextAuth's Credentials provider; email is sent separately through `lib/mail.ts`.
+The scoped `nodemailer` overrides in `package.json` keep NextAuth and `@auth/core` aligned with
+the application's Nodemailer 9 dependency despite their older optional peer ranges. Install
+with normal `npm install` or `npm ci`; no `--legacy-peer-deps` flag is needed locally.
+
 ### First login
 
 Open [http://localhost:3000/signup](http://localhost:3000/signup) and create the first user from the UI.

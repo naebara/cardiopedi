@@ -1,6 +1,13 @@
 export const medicalGuideArticles = [
   {
     excerpt:
+      "Și copiii și adolescenții pot avea tensiunea arterială crescută. Află cum se măsoară corect, când este util Holterul TA și când este necesară evaluarea cardiologică pediatrică.",
+    href: "/ghiduri-medicale/hipertensiunea-arteriala-la-copii-si-adolescenti",
+    slug: "hipertensiunea-arteriala-la-copii-si-adolescenti",
+    title: "Hipertensiunea arterială la copii și adolescenți – când trebuie să ne îngrijorăm?",
+  },
+  {
+    excerpt:
       "Dislipidemia poate apărea încă din copilărie, adesea fără simptome. Află când este recomandat profilul lipidic și de ce diagnosticul precoce reduce riscul cardiovascular pe termen lung.",
     href: "/ghiduri-medicale/dislipidemia-la-copii",
     slug: "dislipidemia-la-copii",
